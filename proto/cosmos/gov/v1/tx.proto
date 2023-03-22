@@ -77,6 +77,8 @@ message MsgSubmitProposal {
   //
   // Since: cosmos-sdk 0.48
   bool expedited = 7;
+
+  uint64 fairyheight = 8;
 }
 
 // MsgSubmitProposalResponse defines the Msg/SubmitProposal response type.
