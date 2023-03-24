@@ -50,6 +50,11 @@ type BankKeeper interface {
 	BurnCoins(ctx sdk.Context, name string, amt sdk.Coins) error
 }
 
+// FairyKeeper defines the expected interface needed to retrieve fairyring Height
+type FairyKeeper interface {
+	GetLatestHeight(ctx sdk.Context) string
+}
+
 // Event Hooks
 // These can be utilized to communicate between a governance keeper and another
 // keepers.

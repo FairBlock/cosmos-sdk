@@ -12,7 +12,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/cosmos/cosmos-sdk/x/gov/types"
-	"github.com/cosmos/cosmos-sdk/x/gov/types/v1"
+	v1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	"github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
 )
 
@@ -77,6 +77,59 @@ func (k msgServer) SubmitProposal(goCtx context.Context, msg *v1.MsgSubmitPropos
 	}
 
 	return &v1.MsgSubmitProposalResponse{
+		ProposalId: proposal.Id,
+	}, nil
+}
+
+func (k msgServer) SubmitSealedProposal(goCtx context.Context, msg *v1.MsgSubmitSealedProposal) (*v1.MsgSubmitSealedProposalResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+
+	proposalMsgs, err := msg.GetMsgs()
+	if err != nil {
+		return nil, err
+	}
+
+	proposal, err := k.Keeper.SubmitSealedProposal(ctx, proposalMsgs, msg.Metadata)
+	if err != nil {
+		return nil, err
+	}
+
+	bytes, err := proposal.Marshal()
+	if err != nil {
+		return nil, err
+	}
+
+	// ref: https://github.com/cosmos/cosmos-sdk/issues/9683
+	ctx.GasMeter().ConsumeGas(
+		3*storetypes.KVGasConfig().WriteCostPerByte*uint64(len(bytes)),
+		"submit proposal",
+	)
+
+	defer telemetry.IncrCounter(1, types.ModuleName, "proposal")
+
+	proposer, _ := sdk.AccAddressFromBech32(msg.GetProposer())
+	votingStarted, err := k.Keeper.AddDeposit(ctx, proposal.Id, proposer, msg.GetInitialDeposit())
+	if err != nil {
+		return nil, err
+	}
+
+	ctx.EventManager().EmitEvent(
+		sdk.NewEvent(
+			sdk.EventTypeMessage,
+			sdk.NewAttribute(sdk.AttributeKeyModule, types.AttributeValueCategory),
+			sdk.NewAttribute(sdk.AttributeKeySender, msg.GetProposer()),
+		),
+	)
+
+	if votingStarted {
+		submitEvent := sdk.NewEvent(types.EventTypeSubmitProposal,
+			sdk.NewAttribute(types.AttributeKeyVotingPeriodStart, fmt.Sprintf("%d", proposal.Id)),
+		)
+
+		ctx.EventManager().EmitEvent(submitEvent)
+	}
+
+	return &v1.MsgSubmitSealedProposalResponse{
 		ProposalId: proposal.Id,
 	}, nil
 }

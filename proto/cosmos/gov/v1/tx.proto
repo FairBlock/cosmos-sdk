@@ -28,6 +28,9 @@ service Msg {
 
   // Deposit defines a method to add deposit on a specific proposal.
   rpc Deposit(MsgDeposit) returns (MsgDepositResponse);
+
+  // SubmitSealedProposal defines a method to create new sealed proposal given a content.
+  rpc SubmitSealedProposal(MsgSubmitSealedProposal) returns (MsgSubmitSealedProposalResponse);
 }
 
 // MsgSubmitProposal defines an sdk.Msg type that supports submitting arbitrary
@@ -42,8 +45,25 @@ message MsgSubmitProposal {
   string metadata = 4;
 }
 
+// MsgSubmitSealedProposal defines an sdk.Msg type that supports submitting arbitrary
+// proposal Content.
+message MsgSubmitSealedProposal {
+  option (cosmos.msg.v1.signer) = "proposer";
+
+  repeated google.protobuf.Any messages             = 1;
+  repeated cosmos.base.v1beta1.Coin initial_deposit = 2 [(gogoproto.nullable) = false];
+  string                            proposer        = 3 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+  // metadata is any arbitrary metadata attached to the proposal.
+  string metadata     = 4;
+}
+
 // MsgSubmitProposalResponse defines the Msg/SubmitProposal response type.
 message MsgSubmitProposalResponse {
+  uint64 proposal_id = 1;
+}
+
+// MsgSubmitSealedProposalResponse defines the Msg/SubmitSealedProposal response type.
+message MsgSubmitSealedProposalResponse {
   uint64 proposal_id = 1;
 }
 

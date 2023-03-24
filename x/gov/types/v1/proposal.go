@@ -85,6 +85,64 @@ type (
 	ProposalQueue []uint64
 )
 
+// NewSealedProposal creates a new Sealed Proposal instance
+func NewSealedProposal(messages []sdk.Msg, id uint64, metadata string, submitTime, depositEndTime time.Time) (SealedProposal, error) {
+	msgs, err := sdktx.SetMsgs(messages)
+	if err != nil {
+		return SealedProposal{}, err
+	}
+
+	tally := EmptyTallyResult()
+
+	p := SealedProposal{
+		Id:               id,
+		Messages:         msgs,
+		Metadata:         metadata,
+		Status:           StatusDepositPeriod,
+		FinalTallyResult: &tally,
+		SubmitTime:       &submitTime,
+		DepositEndTime:   &depositEndTime,
+	}
+
+	return p, nil
+}
+
+// GetMessages returns the proposal messages
+func (p SealedProposal) GetMsgs() ([]sdk.Msg, error) {
+	return sdktx.GetMsgs(p.Messages, "sdk.MsgSealedProposal")
+}
+
+// UnpackInterfaces implements UnpackInterfacesMessage.UnpackInterfaces
+func (p SealedProposal) UnpackInterfaces(unpacker types.AnyUnpacker) error {
+	return sdktx.UnpackInterfaces(unpacker, p.Messages)
+}
+
+// SealedProposals is an array of Sealed proposal
+type SealedProposals []*SealedProposal
+
+var _ types.UnpackInterfacesMessage = SealedProposals{}
+
+// String implements stringer interface
+func (p SealedProposals) String() string {
+	out := "ID - (Status) [Type] Title\n"
+	for _, prop := range p {
+		out += fmt.Sprintf("%d - %s\n",
+			prop.Id, prop.Status)
+	}
+	return strings.TrimSpace(out)
+}
+
+// UnpackInterfaces implements UnpackInterfacesMessage.UnpackInterfaces
+func (p SealedProposals) UnpackInterfaces(unpacker types.AnyUnpacker) error {
+	for _, x := range p {
+		err := x.UnpackInterfaces(unpacker)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // ProposalStatusFromString turns a string into a ProposalStatus
 func ProposalStatusFromString(str string) (ProposalStatus, error) {
 	num, ok := ProposalStatus_value[str]

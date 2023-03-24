@@ -58,6 +58,27 @@ message Proposal {
   string metadata = 10;
 }
 
+// SealedProposal defines the core field members of a governance proposal.
+message SealedProposal {
+  uint64   id                           = 1;
+  repeated google.protobuf.Any messages = 2;
+  ProposalStatus               status   = 3;
+  // final_tally_result is the final tally result of the proposal. When
+  // querying a proposal via gRPC, this field is not populated until the
+  // proposal's voting period has ended.
+  TallyResult               final_tally_result        = 4;
+  google.protobuf.Timestamp submit_time               = 5 [(gogoproto.stdtime) = true];
+  google.protobuf.Timestamp deposit_end_time          = 6 [(gogoproto.stdtime) = true];
+  repeated cosmos.base.v1beta1.Coin total_deposit     = 7 [(gogoproto.nullable) = false];
+  google.protobuf.Timestamp         voting_start_time = 8 [(gogoproto.stdtime) = true];
+  google.protobuf.Timestamp         voting_end_time   = 9 [(gogoproto.stdtime) = true];
+
+  // metadata is any arbitrary metadata attached to the proposal.
+  string metadata = 10;
+
+  uint64 fairy_height = 11;
+}
+
 // ProposalStatus enumerates the valid statuses of a proposal.
 enum ProposalStatus {
   // PROPOSAL_STATUS_UNSPECIFIED defines the default proposal status.
@@ -115,6 +136,8 @@ message DepositParams {
 message VotingParams {
   //  Length of the voting period.
   google.protobuf.Duration voting_period = 1 [(gogoproto.stdduration) = true];
+  //  Delay in revealing votes
+  uint64 reveal_delay = 2;
 }
 
 // TallyParams defines the params for tallying votes on governance proposals.

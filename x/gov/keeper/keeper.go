@@ -27,6 +27,9 @@ type Keeper struct {
 	// The reference to the DelegationSet and ValidatorSet to get information about validators and delegators
 	sk types.StakingKeeper
 
+	// The reference to the FairyBlock kepper to get FairyRing height
+	fairyKeeper types.FairyKeeper
+
 	// GovHooks
 	hooks types.GovHooks
 
@@ -55,7 +58,7 @@ type Keeper struct {
 func NewKeeper(
 	cdc codec.BinaryCodec, key storetypes.StoreKey, paramSpace types.ParamSubspace,
 	authKeeper types.AccountKeeper, bankKeeper types.BankKeeper, sk types.StakingKeeper,
-	legacyRouter v1beta1.Router, router *baseapp.MsgServiceRouter,
+	fairyKeeper types.FairyKeeper, legacyRouter v1beta1.Router, router *baseapp.MsgServiceRouter,
 	config types.Config,
 ) Keeper {
 	// ensure governance module account is set
@@ -79,6 +82,7 @@ func NewKeeper(
 		authKeeper:   authKeeper,
 		bankKeeper:   bankKeeper,
 		sk:           sk,
+		fairyKeeper:  fairyKeeper,
 		cdc:          cdc,
 		legacyRouter: legacyRouter,
 		router:       router,
@@ -132,11 +136,37 @@ func (keeper Keeper) RemoveFromActiveProposalQueue(ctx sdk.Context, proposalID u
 	store.Delete(types.ActiveProposalQueueKey(proposalID, endTime))
 }
 
+// InsertActiveSealedProposalQueue inserts a ProposalID into the active sealed proposal queue at reveal height
+func (keeper Keeper) InsertActiveSealedProposalQueue(ctx sdk.Context, proposalID uint64, revealHeight uint64) {
+	store := ctx.KVStore(keeper.storeKey)
+	bz := types.GetProposalIDBytes(proposalID)
+	store.Set(types.ActiveSealedProposalQueueKey(proposalID, revealHeight), bz)
+}
+
+// RemoveFromActiveProposalQueue removes a proposalID from the Active Proposal Queue
+func (keeper Keeper) RemoveFromActiveSealedProposalQueue(ctx sdk.Context, proposalID uint64, revealHeight uint64) {
+	store := ctx.KVStore(keeper.storeKey)
+	store.Delete(types.ActiveProposalQueueKey(proposalID, revealHeight))
+}
+
 // InsertInactiveProposalQueue Inserts a ProposalID into the inactive proposal queue at endTime
 func (keeper Keeper) InsertInactiveProposalQueue(ctx sdk.Context, proposalID uint64, endTime time.Time) {
 	store := ctx.KVStore(keeper.storeKey)
 	bz := types.GetProposalIDBytes(proposalID)
 	store.Set(types.InactiveProposalQueueKey(proposalID, endTime), bz)
+}
+
+// RemoveFromInactiveProposalQueue removes a proposalID from the Inactive Proposal Queue
+func (keeper Keeper) RemoveFromInactiveProposalQueue(ctx sdk.Context, proposalID uint64, endTime time.Time) {
+	store := ctx.KVStore(keeper.storeKey)
+	store.Delete(types.InactiveProposalQueueKey(proposalID, endTime))
+}
+
+// InsertInactiveSealedProposalQueue Inserts a ProposalID into the inactive Sealed proposal queue at endTime
+func (keeper Keeper) InsertInactiveSealedProposalQueue(ctx sdk.Context, proposalID uint64, endTime time.Time) {
+	store := ctx.KVStore(keeper.storeKey)
+	bz := types.GetProposalIDBytes(proposalID)
+	store.Set(types.InactiveSealedProposalQueueKey(proposalID, endTime), bz)
 }
 
 // RemoveFromInactiveProposalQueue removes a proposalID from the Inactive Proposal Queue

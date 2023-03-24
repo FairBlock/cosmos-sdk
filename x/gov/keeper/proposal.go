@@ -91,6 +91,87 @@ func (keeper Keeper) SubmitProposal(ctx sdk.Context, messages []sdk.Msg, metadat
 	return proposal, nil
 }
 
+// SubmitSealedProposal creates a new sealed proposal given an array of messages
+func (keeper Keeper) SubmitSealedProposal(ctx sdk.Context, messages []sdk.Msg, metadata string) (v1.SealedProposal, error) {
+	err := keeper.assertMetadataLength(metadata)
+	if err != nil {
+		return v1.SealedProposal{}, err
+	}
+
+	// Will hold a comma-separated string of all Msg type URLs.
+	msgsStr := ""
+
+	// Loop through all messages and confirm that each has a handler and the gov module account
+	// as the only signer
+	for _, msg := range messages {
+		msgsStr += fmt.Sprintf(",%s", sdk.MsgTypeURL(msg))
+
+		// perform a basic validation of the message
+		if err := msg.ValidateBasic(); err != nil {
+			return v1.Proposal{}, sdkerrors.Wrap(types.ErrInvalidProposalMsg, err.Error())
+		}
+
+		signers := msg.GetSigners()
+		if len(signers) != 1 {
+			return v1.Proposal{}, types.ErrInvalidSigner
+		}
+
+		// assert that the governance module account is the only signer of the messages
+		if !signers[0].Equals(keeper.GetGovernanceAccount(ctx).GetAddress()) {
+			return v1.Proposal{}, sdkerrors.Wrapf(types.ErrInvalidSigner, signers[0].String())
+		}
+
+		// use the msg service router to see that there is a valid route for that message.
+		handler := keeper.router.Handler(msg)
+		if handler == nil {
+			return v1.Proposal{}, sdkerrors.Wrap(types.ErrUnroutableProposalMsg, sdk.MsgTypeURL(msg))
+		}
+
+		// Only if it's a MsgExecLegacyContent do we try to execute the
+		// proposal in a cached context.
+		// For other Msgs, we do not verify the proposal messages any further.
+		// They may fail upon execution.
+		// ref: https://github.com/cosmos/cosmos-sdk/pull/10868#discussion_r784872842
+		if msg, ok := msg.(*v1.MsgExecLegacyContent); ok {
+			cacheCtx, _ := ctx.CacheContext()
+			if _, err := handler(cacheCtx, msg); err != nil {
+				return v1.SealedProposal{}, sdkerrors.Wrap(types.ErrNoProposalHandlerExists, err.Error())
+			}
+		}
+
+	}
+
+	proposalID, err := keeper.GetProposalID(ctx)
+	if err != nil {
+		return v1.Proposal{}, err
+	}
+
+	submitTime := ctx.BlockHeader().Time
+	depositPeriod := keeper.GetDepositParams(ctx).MaxDepositPeriod
+
+	proposal, err := v1.NewSealedProposal(messages, proposalID, metadata, submitTime, submitTime.Add(*depositPeriod))
+	if err != nil {
+		return v1.SealedProposal{}, err
+	}
+
+	keeper.SetSealedProposal(ctx, proposal)
+	keeper.InsertInactiveProposalQueue(ctx, proposalID, *proposal.DepositEndTime)
+	keeper.SetProposalID(ctx, proposalID+1)
+
+	// called right after a proposal is submitted
+	keeper.AfterProposalSubmission(ctx, proposalID)
+
+	ctx.EventManager().EmitEvent(
+		sdk.NewEvent(
+			types.EventTypeSubmitProposal,
+			sdk.NewAttribute(types.AttributeKeyProposalID, fmt.Sprintf("%d", proposalID)),
+			sdk.NewAttribute(types.AttributeKeyProposalMessages, msgsStr),
+		),
+	)
+
+	return proposal, nil
+}
+
 // GetProposal gets a proposal from store by ProposalID.
 // Panics if can't unmarshal the proposal.
 func (keeper Keeper) GetProposal(ctx sdk.Context, proposalID uint64) (v1.Proposal, bool) {
@@ -102,6 +183,24 @@ func (keeper Keeper) GetProposal(ctx sdk.Context, proposalID uint64) (v1.Proposa
 	}
 
 	var proposal v1.Proposal
+	if err := keeper.UnmarshalProposal(bz, &proposal); err != nil {
+		panic(err)
+	}
+
+	return proposal, true
+}
+
+// GetSealedProposal gets a sealed proposal from store by ProposalID.
+// Panics if can't unmarshal the sealed proposal.
+func (keeper Keeper) GetSealedProposal(ctx sdk.Context, proposalID uint64) (v1.SealedProposal, bool) {
+	store := ctx.KVStore(keeper.storeKey)
+
+	bz := store.Get(types.SealedProposalKey(proposalID))
+	if bz == nil {
+		return v1.SealedProposal{}, false
+	}
+
+	var proposal v1.SealedProposal
 	if err := keeper.UnmarshalProposal(bz, &proposal); err != nil {
 		panic(err)
 	}
@@ -121,6 +220,18 @@ func (keeper Keeper) SetProposal(ctx sdk.Context, proposal v1.Proposal) {
 	store.Set(types.ProposalKey(proposal.Id), bz)
 }
 
+// SetSealedProposal sets a sealed proposal to store.
+// Panics if can't marshal the sealed proposal.
+func (keeper Keeper) SetSealedProposal(ctx sdk.Context, proposal v1.SealedProposal) {
+	bz, err := keeper.MarshalProposal(proposal)
+	if err != nil {
+		panic(err)
+	}
+
+	store := ctx.KVStore(keeper.storeKey)
+	store.Set(types.SealedProposalKey(proposal.Id), bz)
+}
+
 // DeleteProposal deletes a proposal from store.
 // Panics if the proposal doesn't exist.
 func (keeper Keeper) DeleteProposal(ctx sdk.Context, proposalID uint64) {
@@ -132,6 +243,25 @@ func (keeper Keeper) DeleteProposal(ctx sdk.Context, proposalID uint64) {
 
 	if proposal.DepositEndTime != nil {
 		keeper.RemoveFromInactiveProposalQueue(ctx, proposalID, *proposal.DepositEndTime)
+	}
+	if proposal.VotingEndTime != nil {
+		keeper.RemoveFromActiveProposalQueue(ctx, proposalID, *proposal.VotingEndTime)
+	}
+
+	store.Delete(types.ProposalKey(proposalID))
+}
+
+// DeleteSealedProposal deletes a sealed proposal from store.
+// Panics if the sealed proposal doesn't exist.
+func (keeper Keeper) DeleteSealedProposal(ctx sdk.Context, proposalID uint64) {
+	store := ctx.KVStore(keeper.storeKey)
+	proposal, ok := keeper.GetSealedProposal(ctx, proposalID)
+	if !ok {
+		panic(fmt.Sprintf("couldn't find proposal with id#%d", proposalID))
+	}
+
+	if proposal.DepositEndTime != nil {
+		keeper.RemoveFromInactiveSealedProposalQueue(ctx, proposalID, *proposal.DepositEndTime)
 	}
 	if proposal.VotingEndTime != nil {
 		keeper.RemoveFromActiveProposalQueue(ctx, proposalID, *proposal.VotingEndTime)
@@ -256,6 +386,14 @@ func (keeper Keeper) MarshalProposal(proposal v1.Proposal) ([]byte, error) {
 }
 
 func (keeper Keeper) UnmarshalProposal(bz []byte, proposal *v1.Proposal) error {
+	err := keeper.cdc.Unmarshal(bz, proposal)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (keeper Keeper) UnmarshalSealedProposal(bz []byte, proposal *v1.SealedProposal) error {
 	err := keeper.cdc.Unmarshal(bz, proposal)
 	if err != nil {
 		return err

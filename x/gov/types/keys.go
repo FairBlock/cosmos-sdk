@@ -43,6 +43,11 @@ var (
 	InactiveProposalQueuePrefix = []byte{0x02}
 	ProposalIDKey               = []byte{0x03}
 
+	SealedProposalsKeyPrefix          = []byte{0x04}
+	ActiveSealedProposalQueuePrefix   = []byte{0x05}
+	InactiveSealedProposalQueuePrefix = []byte{0x06}
+	SealedProposalIDKey               = []byte{0x07}
+
 	DepositsKeyPrefix = []byte{0x10}
 
 	VotesKeyPrefix = []byte{0x20}
@@ -67,14 +72,29 @@ func ProposalKey(proposalID uint64) []byte {
 	return append(ProposalsKeyPrefix, GetProposalIDBytes(proposalID)...)
 }
 
+// SealedProposalKey gets a specific sealed proposal from the store
+func SealedProposalKey(proposalID uint64) []byte {
+	return append(SealedProposalsKeyPrefix, GetProposalIDBytes(proposalID)...)
+}
+
 // ActiveProposalByTimeKey gets the active proposal queue key by endTime
 func ActiveProposalByTimeKey(endTime time.Time) []byte {
 	return append(ActiveProposalQueuePrefix, sdk.FormatTimeBytes(endTime)...)
 }
 
+// ActiveSealedProposalByRevealKey gets the active proposal queue key by reveal height
+func ActiveSealedProposalByRevealKey(revealHeight uint64) []byte {
+	return append(ActiveSealedProposalQueuePrefix, sdk.Uint64ToBigEndian(revealHeight)...)
+}
+
 // ActiveProposalQueueKey returns the key for a proposalID in the activeProposalQueue
 func ActiveProposalQueueKey(proposalID uint64, endTime time.Time) []byte {
 	return append(ActiveProposalByTimeKey(endTime), GetProposalIDBytes(proposalID)...)
+}
+
+// ActiveSealedProposalQueueKey returns the key for a proposalID in the activeSealedProposalQueue
+func ActiveSealedProposalQueueKey(proposalID uint64, revealHeight uint64) []byte {
+	return append(ActiveSealedProposalByRevealKey(revealHeight), GetProposalIDBytes(proposalID)...)
 }
 
 // InactiveProposalByTimeKey gets the inactive proposal queue key by endTime
@@ -121,6 +141,11 @@ func SplitActiveProposalQueueKey(key []byte) (proposalID uint64, endTime time.Ti
 	return splitKeyWithTime(key)
 }
 
+// SplitActiveProposalQueueKey split the active proposal key and returns the proposal id and endTime
+func SplitActiveSealedProposalQueueKey(key []byte) (proposalID uint64, revealHeight uint64) {
+	return splitKeyWithHeight(key)
+}
+
 // SplitInactiveProposalQueueKey split the inactive proposal key and returns the proposal id and endTime
 func SplitInactiveProposalQueueKey(key []byte) (proposalID uint64, endTime time.Time) {
 	return splitKeyWithTime(key)
@@ -147,6 +172,16 @@ func splitKeyWithTime(key []byte) (proposalID uint64, endTime time.Time) {
 	}
 
 	proposalID = GetProposalIDFromBytes(key[1+lenTime:])
+	return
+}
+
+func splitKeyWithHeight(key []byte) (proposalID uint64, height uint64) {
+	// kv.AssertKeyLength(key[1:], 8+lenTime)
+
+	heightBytes := sdk.Uint64ToBigEndian(height)
+	height = sdk.BigEndianToUint64(key[1 : 1+len(heightBytes)])
+
+	proposalID = GetProposalIDFromBytes(key[1+len(heightBytes):])
 	return
 }
 
