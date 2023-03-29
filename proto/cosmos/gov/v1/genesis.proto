@@ -13,10 +13,14 @@ message GenesisState {
   uint64 starting_proposal_id = 1;
   // deposits defines all the deposits present at genesis.
   repeated Deposit deposits = 2;
+  // sealed_deposits defines all the sealed deposits present at genesis.
+  repeated SealedDeposit sealed_deposits = 8;
   // votes defines all the votes present at genesis.
   repeated Vote votes = 3;
   // proposals defines all the proposals present at genesis.
   repeated Proposal proposals = 4;
+  // sealed_proposals defines all the sealed proposals present at genesis.
+  repeated SealedProposal sealed_proposals = 9;
   // params defines all the paramaters of related to deposit.
   DepositParams deposit_params = 5;
   // params defines all the paramaters of related to voting.

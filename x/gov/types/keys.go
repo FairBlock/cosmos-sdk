@@ -102,9 +102,19 @@ func InactiveProposalByTimeKey(endTime time.Time) []byte {
 	return append(InactiveProposalQueuePrefix, sdk.FormatTimeBytes(endTime)...)
 }
 
+// InactiveProposalByTimeKey gets the inactive proposal queue key by endTime
+func InactiveSealedProposalByHeightKey(height uint64) []byte {
+	return append(InactiveSealedProposalQueuePrefix, sdk.Uint64ToBigEndian(height)...)
+}
+
 // InactiveProposalQueueKey returns the key for a proposalID in the inactiveProposalQueue
 func InactiveProposalQueueKey(proposalID uint64, endTime time.Time) []byte {
 	return append(InactiveProposalByTimeKey(endTime), GetProposalIDBytes(proposalID)...)
+}
+
+// InactiveProposalQueueKey returns the key for a proposalID in the inactiveProposalQueue
+func InactiveSealedProposalQueueKey(proposalID uint64, height uint64) []byte {
+	return append(InactiveSealedProposalByHeightKey(height), GetProposalIDBytes(proposalID)...)
 }
 
 // DepositsKey gets the first part of the deposits key based on the proposalID
@@ -149,6 +159,11 @@ func SplitActiveSealedProposalQueueKey(key []byte) (proposalID uint64, revealHei
 // SplitInactiveProposalQueueKey split the inactive proposal key and returns the proposal id and endTime
 func SplitInactiveProposalQueueKey(key []byte) (proposalID uint64, endTime time.Time) {
 	return splitKeyWithTime(key)
+}
+
+// SplitInactiveSealedProposalQueueKey split the inactive proposal key and returns the proposal id and endTime
+func SplitInactiveSealedProposalQueueKey(key []byte) (proposalID uint64, revealHeight uint64) {
+	return splitKeyWithHeight(key)
 }
 
 // SplitKeyDeposit split the deposits key and returns the proposal id and depositor address

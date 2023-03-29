@@ -146,7 +146,7 @@ func (keeper Keeper) InsertActiveSealedProposalQueue(ctx sdk.Context, proposalID
 // RemoveFromActiveProposalQueue removes a proposalID from the Active Proposal Queue
 func (keeper Keeper) RemoveFromActiveSealedProposalQueue(ctx sdk.Context, proposalID uint64, revealHeight uint64) {
 	store := ctx.KVStore(keeper.storeKey)
-	store.Delete(types.ActiveProposalQueueKey(proposalID, revealHeight))
+	store.Delete(types.ActiveSealedProposalQueueKey(proposalID, revealHeight))
 }
 
 // InsertInactiveProposalQueue Inserts a ProposalID into the inactive proposal queue at endTime
@@ -162,17 +162,17 @@ func (keeper Keeper) RemoveFromInactiveProposalQueue(ctx sdk.Context, proposalID
 	store.Delete(types.InactiveProposalQueueKey(proposalID, endTime))
 }
 
-// InsertInactiveSealedProposalQueue Inserts a ProposalID into the inactive Sealed proposal queue at endTime
-func (keeper Keeper) InsertInactiveSealedProposalQueue(ctx sdk.Context, proposalID uint64, endTime time.Time) {
+// InsertInactiveSealedProposalQueue Inserts a ProposalID into the inactive Sealed proposal queue at reveal height
+func (keeper Keeper) InsertInactiveSealedProposalQueue(ctx sdk.Context, proposalID uint64, height uint64) {
 	store := ctx.KVStore(keeper.storeKey)
 	bz := types.GetProposalIDBytes(proposalID)
-	store.Set(types.InactiveSealedProposalQueueKey(proposalID, endTime), bz)
+	store.Set(types.InactiveSealedProposalQueueKey(proposalID, height), bz)
 }
 
-// RemoveFromInactiveProposalQueue removes a proposalID from the Inactive Proposal Queue
-func (keeper Keeper) RemoveFromInactiveProposalQueue(ctx sdk.Context, proposalID uint64, endTime time.Time) {
+// RemoveFromInactiveSealedProposalQueue removes a proposalID from the Inactive Sealed Proposal Queue
+func (keeper Keeper) RemoveFromInactiveSealedProposalQueue(ctx sdk.Context, proposalID uint64, height uint64) {
 	store := ctx.KVStore(keeper.storeKey)
-	store.Delete(types.InactiveProposalQueueKey(proposalID, endTime))
+	store.Delete(types.InactiveSealedProposalQueueKey(proposalID, height))
 }
 
 // Iterators
@@ -188,6 +188,25 @@ func (keeper Keeper) IterateActiveProposalsQueue(ctx sdk.Context, endTime time.T
 		proposal, found := keeper.GetProposal(ctx, proposalID)
 		if !found {
 			panic(fmt.Sprintf("proposal %d does not exist", proposalID))
+		}
+
+		if cb(proposal) {
+			break
+		}
+	}
+}
+
+// IterateActiveSealedProposalsQueue iterates over the proposals in the active sealed proposal queue
+// and performs a callback function
+func (keeper Keeper) IterateActiveSealedProposalsQueue(ctx sdk.Context, height uint64, cb func(proposal v1.SealedProposal) (stop bool)) {
+	iterator := keeper.ActiveSealedProposalQueueIterator(ctx, endTime)
+
+	defer iterator.Close()
+	for ; iterator.Valid(); iterator.Next() {
+		proposalID, _ := types.SplitActiveSealedProposalQueueKey(iterator.Key())
+		proposal, found := keeper.GetSealedProposal(ctx, proposalID)
+		if !found {
+			panic(fmt.Sprintf("sealed proposal %d does not exist", proposalID))
 		}
 
 		if cb(proposal) {
@@ -215,16 +234,55 @@ func (keeper Keeper) IterateInactiveProposalsQueue(ctx sdk.Context, endTime time
 	}
 }
 
+// IterateInactiveSealedProposalsQueue iterates over the proposals in the inactive sealed proposal queue
+// and performs a callback function
+func (keeper Keeper) IterateInactiveSealedProposalsQueue(ctx sdk.Context, height uint64 , cb func(proposal v1.SealedProposal) (stop bool)) {
+	iterator := keeper.InactiveSealedProposalQueueIterator(ctx, height)
+
+	defer iterator.Close()
+	for ; iterator.Valid(); iterator.Next() {
+		proposalID, _ := types.SplitInactiveSealedProposalQueueKey(iterator.Key())
+		proposal, found := keeper.GetSealedProposal(ctx, proposalID)
+		if !found {
+			panic(fmt.Sprintf("sealed proposal %d does not exist", proposalID))
+		}
+
+		if cb(proposal) {
+			break
+		}
+	}
+}
+
 // ActiveProposalQueueIterator returns an sdk.Iterator for all the proposals in the Active Queue that expire by endTime
 func (keeper Keeper) ActiveProposalQueueIterator(ctx sdk.Context, endTime time.Time) sdk.Iterator {
 	store := ctx.KVStore(keeper.storeKey)
 	return store.Iterator(types.ActiveProposalQueuePrefix, sdk.PrefixEndBytes(types.ActiveProposalByTimeKey(endTime)))
 }
 
+// ActiveSealedProposalQueueIterator returns an sdk.Iterator for all the sealed proposals in the
+// Active Queue that expire by revealHeight
+func (keeper Keeper) ActiveSealedProposalQueueIterator(ctx sdk.Context, revealHeight uint64) sdk.Iterator {
+	store := ctx.KVStore(keeper.storeKey)
+	return store.Iterator(
+		types.ActiveSealedProposalQueuePrefix,
+		sdk.PrefixEndBytes(types.ActiveSealedProposalByRevealKey(revealHeight))
+	)
+}
+
 // InactiveProposalQueueIterator returns an sdk.Iterator for all the proposals in the Inactive Queue that expire by endTime
 func (keeper Keeper) InactiveProposalQueueIterator(ctx sdk.Context, endTime time.Time) sdk.Iterator {
 	store := ctx.KVStore(keeper.storeKey)
 	return store.Iterator(types.InactiveProposalQueuePrefix, sdk.PrefixEndBytes(types.InactiveProposalByTimeKey(endTime)))
+}
+
+// InactiveSealedProposalQueueIterator returns an sdk.Iterator for all the sealed proposals in the
+// Inactive Queue that expire by revealHeight
+func (keeper Keeper) InactiveSealedProposalQueueIterator(ctx sdk.Context, revealHeight uint64) sdk.Iterator {
+	store := ctx.KVStore(keeper.storeKey)
+	return store.Iterator(
+		types.InactiveSealedProposalQueuePrefix,
+		sdk.PrefixEndBytes(types.InactiveSealedProposalByHeightKey(revealHeight))
+	)
 }
 
 // assertMetadataLength returns an error if given metadata length

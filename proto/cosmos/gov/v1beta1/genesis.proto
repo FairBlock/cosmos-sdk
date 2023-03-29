@@ -13,10 +13,14 @@ message GenesisState {
   uint64 starting_proposal_id = 1;
   // deposits defines all the deposits present at genesis.
   repeated Deposit deposits = 2 [(gogoproto.castrepeated) = "Deposits", (gogoproto.nullable) = false];
+  // sealeddeposits defines all the sealed deposits present at genesis.
+  repeated SealedDeposit sealed_deposits = 8 [(gogoproto.castrepeated) = "SealedDeposits", (gogoproto.nullable) = false];
   // votes defines all the votes present at genesis.
   repeated Vote votes = 3 [(gogoproto.castrepeated) = "Votes", (gogoproto.nullable) = false];
   // proposals defines all the proposals present at genesis.
   repeated Proposal proposals = 4 [(gogoproto.castrepeated) = "Proposals", (gogoproto.nullable) = false];
+  // sealedproposals defines all the sealed proposals present at genesis.
+  repeated SealedProposal sealed_proposals = 9 [(gogoproto.castrepeated) = "SealedProposals", (gogoproto.nullable) = false];
   // params defines all the paramaters of related to deposit.
   DepositParams deposit_params = 5 [(gogoproto.nullable) = false];
   // params defines all the paramaters of related to voting.

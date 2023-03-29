@@ -39,6 +39,14 @@ message Deposit {
   repeated cosmos.base.v1beta1.Coin amount = 3 [(gogoproto.nullable) = false];
 }
 
+// SealedDeposit defines an amount deposited by an account address to an active
+// sealed proposal.
+message SealedDeposit {
+  uint64   proposal_id                     = 1;
+  string   depositor                       = 2 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+  repeated cosmos.base.v1beta1.Coin amount = 3 [(gogoproto.nullable) = false];
+}
+
 // Proposal defines the core field members of a governance proposal.
 message Proposal {
   uint64   id                           = 1;
@@ -76,7 +84,7 @@ message SealedProposal {
   // metadata is any arbitrary metadata attached to the proposal.
   string metadata = 10;
 
-  uint64 fairy_height = 11;
+  uint64 fairy_height = 11 ;
 }
 
 // ProposalStatus enumerates the valid statuses of a proposal.

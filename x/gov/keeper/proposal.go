@@ -143,7 +143,7 @@ func (keeper Keeper) SubmitSealedProposal(ctx sdk.Context, messages []sdk.Msg, m
 
 	proposalID, err := keeper.GetProposalID(ctx)
 	if err != nil {
-		return v1.Proposal{}, err
+		return v1.SealedProposal{}, err
 	}
 
 	submitTime := ctx.BlockHeader().Time
@@ -155,7 +155,7 @@ func (keeper Keeper) SubmitSealedProposal(ctx sdk.Context, messages []sdk.Msg, m
 	}
 
 	keeper.SetSealedProposal(ctx, proposal)
-	keeper.InsertInactiveProposalQueue(ctx, proposalID, *proposal.DepositEndTime)
+	keeper.InsertInactiveSealedProposalQueue(ctx, proposalID, *proposal.DepositEndTime)
 	keeper.SetProposalID(ctx, proposalID+1)
 
 	// called right after a proposal is submitted
@@ -223,7 +223,7 @@ func (keeper Keeper) SetProposal(ctx sdk.Context, proposal v1.Proposal) {
 // SetSealedProposal sets a sealed proposal to store.
 // Panics if can't marshal the sealed proposal.
 func (keeper Keeper) SetSealedProposal(ctx sdk.Context, proposal v1.SealedProposal) {
-	bz, err := keeper.MarshalProposal(proposal)
+	bz, err := keeper.MarshalSealedProposal(proposal)
 	if err != nil {
 		panic(err)
 	}
@@ -264,10 +264,10 @@ func (keeper Keeper) DeleteSealedProposal(ctx sdk.Context, proposalID uint64) {
 		keeper.RemoveFromInactiveSealedProposalQueue(ctx, proposalID, *proposal.DepositEndTime)
 	}
 	if proposal.VotingEndTime != nil {
-		keeper.RemoveFromActiveProposalQueue(ctx, proposalID, *proposal.VotingEndTime)
+		keeper.RemoveFromActiveSealedProposalQueue(ctx, proposalID, *proposal.VotingEndTime)
 	}
 
-	store.Delete(types.ProposalKey(proposalID))
+	store.Delete(types.SealedProposalKey(proposalID))
 }
 
 // IterateProposals iterates over the all the proposals and performs a callback function.
@@ -291,9 +291,39 @@ func (keeper Keeper) IterateProposals(ctx sdk.Context, cb func(proposal v1.Propo
 	}
 }
 
+// IterateSealedProposals iterates over the all the sealed proposals and performs a callback function.
+// Panics when the iterator encounters a sealed proposal which can't be unmarshaled.
+func (keeper Keeper) IterateSealedProposals(ctx sdk.Context, cb func(proposal v1.SealedProposal) (stop bool)) {
+	store := ctx.KVStore(keeper.storeKey)
+
+	iterator := sdk.KVStorePrefixIterator(store, types.SealedProposalsKeyPrefix)
+	defer iterator.Close()
+
+	for ; iterator.Valid(); iterator.Next() {
+		var proposal v1.SealedProposal
+		err := keeper.UnmarshalSealedProposal(iterator.Value(), &proposal)
+		if err != nil {
+			panic(err)
+		}
+
+		if cb(proposal) {
+			break
+		}
+	}
+}
+
 // GetProposals returns all the proposals from store
 func (keeper Keeper) GetProposals(ctx sdk.Context) (proposals v1.Proposals) {
 	keeper.IterateProposals(ctx, func(proposal v1.Proposal) bool {
+		proposals = append(proposals, &proposal)
+		return false
+	})
+	return
+}
+
+// GetSealedProposals returns all the sealed proposals from store
+func (keeper Keeper) GetSealedProposals(ctx sdk.Context) (proposals v1.SealedProposals) {
+	keeper.IterateSealedProposals(ctx, func(proposal v1.SealedProposal) bool {
 		proposals = append(proposals, &proposal)
 		return false
 	})
@@ -377,7 +407,29 @@ func (keeper Keeper) ActivateVotingPeriod(ctx sdk.Context, proposal v1.Proposal)
 	keeper.InsertActiveProposalQueue(ctx, proposal.Id, *proposal.VotingEndTime)
 }
 
+func (keeper Keeper) ActivateSecretVotingPeriod(ctx sdk.Context, proposal v1.SealedProposal) {
+	lastHeight := keeper.fairyKeeper.GetLatestHeight(ctx)
+	startTime := ctx.BlockHeader().Time
+	proposal.VotingStartTime = &startTime
+	revealDelay := keeper.GetVotingParams(ctx).RevealDelay
+	// endTime := proposal.VotingStartTime.Add(*votingPeriod)
+	// proposal.VotingEndTime = &endTime
+	proposal.Status = v1.StatusVotingPeriod
+	keeper.SetSealedProposal(ctx, proposal)
+
+	keeper.RemoveFromInactiveSealedProposalQueue(ctx, proposal.Id, *proposal.FairyHeight)
+	keeper.InsertActiveSealedProposalQueue(ctx, proposal.Id, *proposal.FairyHeight)
+}
+
 func (keeper Keeper) MarshalProposal(proposal v1.Proposal) ([]byte, error) {
+	bz, err := keeper.cdc.Marshal(&proposal)
+	if err != nil {
+		return nil, err
+	}
+	return bz, nil
+}
+
+func (keeper Keeper) MarshalSealedProposal(proposal v1.SealedProposal) ([]byte, error) {
 	bz, err := keeper.cdc.Marshal(&proposal)
 	if err != nil {
 		return nil, err

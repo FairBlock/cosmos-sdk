@@ -128,3 +128,21 @@ message MsgDeposit {
 
 // MsgDepositResponse defines the Msg/Deposit response type.
 message MsgDepositResponse {}
+
+// MsgSealedDeposit defines a message to submit a deposit to an existing sealed proposal.
+message MsgSealedDeposit {
+  option (cosmos.msg.v1.signer) = "depositor";
+
+  option (gogoproto.equal)            = false;
+  option (gogoproto.goproto_stringer) = false;
+  option (gogoproto.stringer)         = false;
+  option (gogoproto.goproto_getters)  = false;
+
+  uint64   proposal_id                     = 1 [(gogoproto.jsontag) = "proposal_id"];
+  string   depositor                       = 2 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+  repeated cosmos.base.v1beta1.Coin amount = 3
+      [(gogoproto.nullable) = false, (gogoproto.castrepeated) = "github.com/cosmos/cosmos-sdk/types.Coins"];
+}
+
+// MsgSealedDepositResponse defines the Msg/SealedDeposit response type.
+message MsgSealedDepositResponse {}
