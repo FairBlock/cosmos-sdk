@@ -259,6 +259,45 @@ func (k msgServer) Deposit(goCtx context.Context, msg *v1.MsgDeposit) (*v1.MsgDe
 	return &v1.MsgDepositResponse{}, nil
 }
 
+func (k msgServer) SealedDeposit(goCtx context.Context, msg *v1.MsgSealedDeposit) (*v1.MsgSealedDepositResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	accAddr, err := sdk.AccAddressFromBech32(msg.Depositor)
+	if err != nil {
+		return nil, err
+	}
+	votingStarted, err := k.Keeper.AddSealedDeposit(ctx, msg.ProposalId, accAddr, msg.Amount)
+	if err != nil {
+		return nil, err
+	}
+
+	defer telemetry.IncrCounterWithLabels(
+		[]string{types.ModuleName, "sealed_deposit"},
+		1,
+		[]metrics.Label{
+			telemetry.NewLabel("proposal_id", strconv.Itoa(int(msg.ProposalId))),
+		},
+	)
+
+	ctx.EventManager().EmitEvent(
+		sdk.NewEvent(
+			sdk.EventTypeMessage,
+			sdk.NewAttribute(sdk.AttributeKeyModule, types.AttributeValueCategory),
+			sdk.NewAttribute(sdk.AttributeKeySender, msg.Depositor),
+		),
+	)
+
+	if votingStarted {
+		ctx.EventManager().EmitEvent(
+			sdk.NewEvent(
+				types.EventTypeProposalDeposit,
+				sdk.NewAttribute(types.AttributeKeyVotingPeriodStart, fmt.Sprintf("%d", msg.ProposalId)),
+			),
+		)
+	}
+
+	return &v1.MsgSealedDepositResponse{}, nil
+}
+
 type legacyMsgServer struct {
 	govAcct string
 	server  v1.MsgServer

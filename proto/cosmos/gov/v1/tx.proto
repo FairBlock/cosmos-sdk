@@ -29,6 +29,9 @@ service Msg {
   // Deposit defines a method to add deposit on a specific proposal.
   rpc Deposit(MsgDeposit) returns (MsgDepositResponse);
 
+  // SealedDeposit defines a method to add deposit on a specific Sealed proposal.
+  rpc SealedDeposit(MsgSealedDeposit) returns (MsgSealedDepositResponse);
+
   // SubmitSealedProposal defines a method to create new sealed proposal given a content.
   rpc SubmitSealedProposal(MsgSubmitSealedProposal) returns (MsgSubmitSealedProposalResponse);
 }

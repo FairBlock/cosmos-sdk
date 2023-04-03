@@ -48,7 +48,8 @@ var (
 	InactiveSealedProposalQueuePrefix = []byte{0x06}
 	SealedProposalIDKey               = []byte{0x07}
 
-	DepositsKeyPrefix = []byte{0x10}
+	DepositsKeyPrefix       = []byte{0x10}
+	SealedDepositsKeyPrefix = []byte{0x11}
 
 	VotesKeyPrefix = []byte{0x20}
 )
@@ -125,6 +126,16 @@ func DepositsKey(proposalID uint64) []byte {
 // DepositKey key of a specific deposit from the store
 func DepositKey(proposalID uint64, depositorAddr sdk.AccAddress) []byte {
 	return append(DepositsKey(proposalID), address.MustLengthPrefix(depositorAddr.Bytes())...)
+}
+
+// SealedDepositsKey gets the first part of the deposits key based on the sealed proposalID
+func SealedDepositsKey(proposalID uint64) []byte {
+	return append(SealedDepositsKeyPrefix, GetProposalIDBytes(proposalID)...)
+}
+
+// SealedDepositKey key of a specific deposit from the store
+func SealedDepositKey(proposalID uint64, depositorAddr sdk.AccAddress) []byte {
+	return append(SealedDepositsKey(proposalID), address.MustLengthPrefix(depositorAddr.Bytes())...)
 }
 
 // VotesKey gets the first part of the votes key based on the proposalID
