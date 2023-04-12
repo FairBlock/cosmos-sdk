@@ -236,8 +236,8 @@ func (keeper Keeper) IterateInactiveProposalsQueue(ctx sdk.Context, endTime time
 
 // IterateInactiveSealedProposalsQueue iterates over the proposals in the inactive sealed proposal queue
 // and performs a callback function
-func (keeper Keeper) IterateInactiveSealedProposalsQueue(ctx sdk.Context, height uint64 , cb func(proposal v1.SealedProposal) (stop bool)) {
-	iterator := keeper.InactiveSealedProposalQueueIterator(ctx, height)
+func (keeper Keeper) IterateInactiveSealedProposalsQueue(ctx sdk.Context, endTime time.Time , cb func(proposal v1.SealedProposal) (stop bool)) {
+	iterator := keeper.InactiveSealedProposalQueueIterator(ctx, endTime)
 
 	defer iterator.Close()
 	for ; iterator.Valid(); iterator.Next() {
@@ -277,12 +277,9 @@ func (keeper Keeper) InactiveProposalQueueIterator(ctx sdk.Context, endTime time
 
 // InactiveSealedProposalQueueIterator returns an sdk.Iterator for all the sealed proposals in the
 // Inactive Queue that expire by revealHeight
-func (keeper Keeper) InactiveSealedProposalQueueIterator(ctx sdk.Context, revealHeight uint64) sdk.Iterator {
+func (keeper Keeper) InactiveSealedProposalQueueIterator(ctx sdk.Context, endTime time.Time) sdk.Iterator {
 	store := ctx.KVStore(keeper.storeKey)
-	return store.Iterator(
-		types.InactiveSealedProposalQueuePrefix,
-		sdk.PrefixEndBytes(types.InactiveSealedProposalByHeightKey(revealHeight))
-	)
+	return store.Iterator(types.InactiveSealedProposalQueuePrefix, sdk.PrefixEndBytes(types.InactiveSealedProposalByTimeKey(endTime)))
 }
 
 // assertMetadataLength returns an error if given metadata length

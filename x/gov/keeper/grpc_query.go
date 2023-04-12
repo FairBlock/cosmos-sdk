@@ -90,6 +90,79 @@ func (q Keeper) Proposals(c context.Context, req *v1.QueryProposalsRequest) (*v1
 	return &v1.QueryProposalsResponse{Proposals: filteredProposals, Pagination: pageRes}, nil
 }
 
+// SealedProposal returns sealed proposal details based on ProposalID
+func (q Keeper) SealedProposal(c context.Context, req *v1.QuerySealedProposalRequest) (*v1.QuerySealedProposalResponse, error) {
+	if req == nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid request")
+	}
+
+	if req.ProposalId == 0 {
+		return nil, status.Error(codes.InvalidArgument, "proposal id can not be 0")
+	}
+
+	ctx := sdk.UnwrapSDKContext(c)
+
+	proposal, found := q.GetSealedProposal(ctx, req.ProposalId)
+	if !found {
+		return nil, status.Errorf(codes.NotFound, "proposal %d doesn't exist", req.ProposalId)
+	}
+
+	return &v1.QuerySealedProposalResponse{Proposal: &proposal}, nil
+}
+
+// SealedProposals implements the Query/SealedProposals gRPC method
+func (q Keeper) SealedProposals(c context.Context, req *v1.QuerySealedProposalsRequest) (*v1.QuerySealedProposalsResponse, error) {
+	ctx := sdk.UnwrapSDKContext(c)
+
+	store := ctx.KVStore(q.storeKey)
+	proposalStore := prefix.NewStore(store, types.SealedProposalsKeyPrefix)
+
+	filteredProposals, pageRes, err := query.GenericFilteredPaginate(
+		q.cdc,
+		proposalStore,
+		req.Pagination,
+		func(key []byte, p *v1.SealedProposal) (*v1.SealedProposal, error) {
+			matchVoter, matchDepositor, matchStatus := true, true, true
+
+			// match status (if supplied/valid)
+			if v1.ValidProposalStatus(req.ProposalStatus) {
+				matchStatus = p.Status == req.ProposalStatus
+			}
+
+			// match voter address (if supplied)
+			if len(req.Voter) > 0 {
+				voter, err := sdk.AccAddressFromBech32(req.Voter)
+				if err != nil {
+					return nil, err
+				}
+
+				_, matchVoter = q.GetVote(ctx, p.Id, voter)
+			}
+
+			// match depositor (if supplied)
+			if len(req.Depositor) > 0 {
+				depositor, err := sdk.AccAddressFromBech32(req.Depositor)
+				if err != nil {
+					return nil, err
+				}
+				_, matchDepositor = q.GetSealedDeposit(ctx, p.Id, depositor)
+			}
+
+			if matchVoter && matchDepositor && matchStatus {
+				return p, nil
+			}
+
+			return nil, nil
+		}, func() *v1.SealedProposal {
+			return &v1.SealedProposal{}
+		})
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &v1.QuerySealedProposalsResponse{Proposals: filteredProposals, Pagination: pageRes}, nil
+}
+
 // Vote returns Voted information based on proposalID, voterAddr
 func (q Keeper) Vote(c context.Context, req *v1.QueryVoteRequest) (*v1.QueryVoteResponse, error) {
 	if req == nil {

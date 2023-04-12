@@ -103,6 +103,11 @@ func InactiveProposalByTimeKey(endTime time.Time) []byte {
 	return append(InactiveProposalQueuePrefix, sdk.FormatTimeBytes(endTime)...)
 }
 
+// InactiveSealedProposalByTimeKey gets the inactive sealed proposal queue key by endTime
+func InactiveSealedProposalByTimeKey(endTime time.Time) []byte {
+	return append(InactiveSealedProposalQueuePrefix, sdk.FormatTimeBytes(endTime)...)
+}
+
 // InactiveProposalByTimeKey gets the inactive proposal queue key by endTime
 func InactiveSealedProposalByHeightKey(height uint64) []byte {
 	return append(InactiveSealedProposalQueuePrefix, sdk.Uint64ToBigEndian(height)...)
