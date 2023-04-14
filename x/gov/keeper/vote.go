@@ -11,13 +11,26 @@ import (
 
 // AddVote adds a vote on a specific proposal
 func (keeper Keeper) AddVote(ctx sdk.Context, proposalID uint64, voterAddr sdk.AccAddress, options v1.WeightedVoteOptions, metadata string) error {
+	isSealed := false
 	proposal, ok := keeper.GetProposal(ctx, proposalID)
 	if !ok {
-		return sdkerrors.Wrapf(types.ErrUnknownProposal, "%d", proposalID)
+		sealedProposal, ok := keeper.GetSealedProposal(ctx, proposalID)
+		if !ok {
+			return sdkerrors.Wrapf(types.ErrUnknownProposal, "%d", proposalID)
+		}
+		isSealed = true
 	}
-	if proposal.Status != v1.StatusVotingPeriod {
-		return sdkerrors.Wrapf(types.ErrInactiveProposal, "%d", proposalID)
+
+	if isSealed {
+		if sealedProposal.Status != v1.StatusVotingPeriod {
+			return sdkerrors.Wrapf(types.ErrInactiveProposal, "%d", proposalID)
+		}
+	} else {
+		if proposal.Status != v1.StatusVotingPeriod {
+			return sdkerrors.Wrapf(types.ErrInactiveProposal, "%d", proposalID)
+		}
 	}
+
 	err := keeper.assertMetadataLength(metadata)
 	if err != nil {
 		return err
