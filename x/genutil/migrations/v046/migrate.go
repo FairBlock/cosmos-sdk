@@ -12,7 +12,7 @@ import (
 )
 
 // Migrate migrates exported state from v0.43 to a v0.46 genesis state.
-func Migrate(appState types.AppMap, clientCtx client.Context) (types.AppMap, error) {
+func Migrate(appState types.AppMap, clientCtx client.Context) types.AppMap {
 	// Migrate x/gov.
 	if appState[v2gov.ModuleName] != nil {
 		// unmarshal relative source genesis application state
@@ -26,7 +26,7 @@ func Migrate(appState types.AppMap, clientCtx client.Context) (types.AppMap, err
 		// the respective key.
 		new, err := v3gov.MigrateJSON(&old)
 		if err != nil {
-			return nil, err
+			panic(err)
 		}
 		appState[v3gov.ModuleName] = clientCtx.Codec.MustMarshalJSON(new)
 	}
@@ -44,10 +44,10 @@ func Migrate(appState types.AppMap, clientCtx client.Context) (types.AppMap, err
 		// the respective key.
 		new, err := stakingv3.MigrateJSON(old)
 		if err != nil {
-			return nil, err
+			panic(err)
 		}
 		appState[stakingv3.ModuleName] = clientCtx.Codec.MustMarshalJSON(&new)
 	}
 
-	return appState, nil
+	return appState
 }

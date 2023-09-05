@@ -2,29 +2,28 @@ package genutil_test
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"math/rand"
 	"testing"
 	"time"
 
-	"github.com/golang/mock/gomock"
-	"github.com/stretchr/testify/suite"
-
-	"cosmossdk.io/core/genesis"
 	"cosmossdk.io/math"
-	storetypes "cosmossdk.io/store/types"
 
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	"github.com/cosmos/cosmos-sdk/testutil"
 	simtestutil "github.com/cosmos/cosmos-sdk/testutil/sims"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	moduletestutil "github.com/cosmos/cosmos-sdk/types/module/testutil"
+
+	abci "github.com/cometbft/cometbft/abci/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
 	genutiltestutil "github.com/cosmos/cosmos-sdk/x/genutil/testutil"
 	"github.com/cosmos/cosmos-sdk/x/genutil/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/suite"
 )
 
 var (
@@ -51,8 +50,8 @@ type GenTxTestSuite struct {
 
 func (suite *GenTxTestSuite) SetupTest() {
 	suite.encodingConfig = moduletestutil.MakeTestEncodingConfig(genutil.AppModuleBasic{})
-	key := storetypes.NewKVStoreKey("a_Store_Key")
-	tkey := storetypes.NewTransientStoreKey("a_transient_store")
+	key := sdk.NewKVStoreKey("a_Store_Key")
+	tkey := sdk.NewTransientStoreKey("a_transient_store")
 	suite.ctx = testutil.DefaultContext(key, tkey)
 
 	ctrl := gomock.NewController(suite.T())
@@ -65,10 +64,10 @@ func (suite *GenTxTestSuite) SetupTest() {
 	amount := sdk.NewInt64Coin(sdk.DefaultBondDenom, 50)
 	one := math.OneInt()
 	suite.msg1, err = stakingtypes.NewMsgCreateValidator(
-		sdk.ValAddress(pk1.Address()).String(), pk1, amount, desc, comm, one)
+		sdk.ValAddress(pk1.Address()), pk1, amount, desc, comm, one)
 	suite.NoError(err)
 	suite.msg2, err = stakingtypes.NewMsgCreateValidator(
-		sdk.ValAddress(pk2.Address()).String(), pk1, amount, desc, comm, one)
+		sdk.ValAddress(pk2.Address()), pk1, amount, desc, comm, one)
 	suite.NoError(err)
 }
 
@@ -91,7 +90,9 @@ func (suite *GenTxTestSuite) setAccountBalance(balances []banktypes.Balance) jso
 		},
 		Supply: sdk.Coins{sdk.NewInt64Coin(sdk.DefaultBondDenom, 0)},
 	}
-	bankGenesisState.Balances = append(bankGenesisState.Balances, balances...)
+	for _, balance := range balances {
+		bankGenesisState.Balances = append(bankGenesisState.Balances, balance)
+	}
 	for _, balance := range bankGenesisState.Balances {
 		bankGenesisState.Supply.Add(balance.Coins...)
 	}
@@ -143,13 +144,17 @@ func (suite *GenTxTestSuite) TestSetGenTxsInAppGenesisState() {
 			tc.malleate()
 			appGenesisState, err := genutil.SetGenTxsInAppGenesisState(cdc, txJSONEncoder, make(map[string]json.RawMessage), genTxs)
 
-			suite.Require().NoError(err)
-			suite.Require().NotNil(appGenesisState[types.ModuleName])
+			if tc.expPass {
+				suite.Require().NoError(err)
+				suite.Require().NotNil(appGenesisState[types.ModuleName])
 
-			var genesisState types.GenesisState
-			err = cdc.UnmarshalJSON(appGenesisState[types.ModuleName], &genesisState)
-			suite.Require().NoError(err)
-			suite.Require().NotNil(genesisState.GenTxs)
+				var genesisState types.GenesisState
+				err := cdc.UnmarshalJSON(appGenesisState[types.ModuleName], &genesisState)
+				suite.Require().NoError(err)
+				suite.Require().NotNil(genesisState.GenTxs)
+			} else {
+				suite.Require().Error(err)
+			}
 		})
 	}
 }
@@ -242,7 +247,7 @@ func (suite *GenTxTestSuite) TestDeliverGenTxs() {
 	testCases := []struct {
 		msg         string
 		malleate    func()
-		deliverTxFn genesis.TxHandler
+		deliverTxFn func(abci.RequestDeliverTx) abci.ResponseDeliverTx
 		expPass     bool
 	}{
 		{
@@ -256,7 +261,14 @@ func (suite *GenTxTestSuite) TestDeliverGenTxs() {
 				suite.Require().NoError(err)
 				genTxs[0] = tx
 			},
-			GenesisState1{},
+			func(_ abci.RequestDeliverTx) abci.ResponseDeliverTx {
+				return abci.ResponseDeliverTx{
+					Code:      sdkerrors.ErrNoSignatures.ABCICode(),
+					GasWanted: int64(10000000),
+					GasUsed:   int64(41913),
+					Log:       "no signatures supplied",
+				}
+			},
 			false,
 		},
 		{
@@ -282,7 +294,15 @@ func (suite *GenTxTestSuite) TestDeliverGenTxs() {
 				suite.Require().NoError(err)
 				genTxs[0] = genTx
 			},
-			GenesisState2{},
+			func(tx abci.RequestDeliverTx) abci.ResponseDeliverTx {
+				return abci.ResponseDeliverTx{
+					Code:      sdkerrors.ErrUnauthorized.ABCICode(),
+					GasWanted: int64(10000000),
+					GasUsed:   int64(41353),
+					Log:       "signature verification failed; please verify account number (4) and chain-id (): unauthorized",
+					Codespace: "sdk",
+				}
+			},
 			true,
 		},
 	}
@@ -294,13 +314,11 @@ func (suite *GenTxTestSuite) TestDeliverGenTxs() {
 			tc.malleate()
 
 			if tc.expPass {
-				suite.stakingKeeper.EXPECT().ApplyAndReturnValidatorSetUpdates(gomock.Any()).Return(nil, nil).AnyTimes()
 				suite.Require().NotPanics(func() {
-					_, err := genutil.DeliverGenTxs(
+					genutil.DeliverGenTxs(
 						suite.ctx, genTxs, suite.stakingKeeper, tc.deliverTxFn,
 						suite.encodingConfig.TxConfig,
 					)
-					suite.Require().NoError(err)
 				})
 			} else {
 				_, err := genutil.DeliverGenTxs(
@@ -316,16 +334,4 @@ func (suite *GenTxTestSuite) TestDeliverGenTxs() {
 
 func TestGenTxTestSuite(t *testing.T) {
 	suite.Run(t, new(GenTxTestSuite))
-}
-
-type GenesisState1 struct{}
-
-func (GenesisState1) ExecuteGenesisTx(_ []byte) error {
-	return errors.New("no signatures supplied")
-}
-
-type GenesisState2 struct{}
-
-func (GenesisState2) ExecuteGenesisTx(tx []byte) error {
-	return nil
 }

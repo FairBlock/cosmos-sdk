@@ -1,19 +1,17 @@
 package crisis
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"time"
 
+	abci "github.com/cometbft/cometbft/abci/types"
 	gwruntime "github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/spf13/cast"
 	"github.com/spf13/cobra"
 
 	modulev1 "cosmossdk.io/api/cosmos/crisis/module/v1"
-	"cosmossdk.io/core/address"
 	"cosmossdk.io/core/appmodule"
-	"cosmossdk.io/core/store"
 	"cosmossdk.io/depinject"
 
 	"github.com/cosmos/cosmos-sdk/client"
@@ -21,6 +19,7 @@ import (
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/cosmos/cosmos-sdk/server"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
+	store "github.com/cosmos/cosmos-sdk/store/types"
 	"github.com/cosmos/cosmos-sdk/telemetry"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
@@ -35,7 +34,10 @@ import (
 // ConsensusVersion defines the current x/crisis module consensus version.
 const ConsensusVersion = 2
 
-var _ module.AppModuleBasic = AppModuleBasic{}
+var (
+	_ module.EndBlockAppModule = AppModule{}
+	_ module.AppModuleBasic    = AppModuleBasic{}
+)
 
 // Module init related flags
 const (
@@ -71,13 +73,16 @@ func (AppModuleBasic) ValidateGenesis(cdc codec.JSONCodec, config client.TxEncod
 	return types.ValidateGenesis(&data)
 }
 
-// RegisterGRPCGatewayRoutes registers the gRPC Gateway routes for the crisis module.
+// RegisterGRPCGatewayRoutes registers the gRPC Gateway routes for the capability module.
 func (AppModuleBasic) RegisterGRPCGatewayRoutes(_ client.Context, _ *gwruntime.ServeMux) {}
 
 // GetTxCmd returns the root tx command for the crisis module.
 func (b AppModuleBasic) GetTxCmd() *cobra.Command {
 	return cli.NewTxCmd()
 }
+
+// GetQueryCmd returns no root query command for the crisis module.
+func (AppModuleBasic) GetQueryCmd() *cobra.Command { return nil }
 
 // RegisterInterfaces registers interfaces and implementations of the crisis
 // module.
@@ -114,11 +119,7 @@ func NewAppModule(keeper *keeper.Keeper, skipGenesisInvariants bool, ss exported
 	}
 }
 
-var (
-	_ appmodule.AppModule     = AppModule{}
-	_ appmodule.HasEndBlocker = AppModule{}
-	_ module.HasGenesis       = AppModule{}
-)
+var _ appmodule.AppModule = AppModule{}
 
 // IsOnePerModuleType implements the depinject.OnePerModuleType interface.
 func (am AppModule) IsOnePerModuleType() {}
@@ -136,6 +137,9 @@ func (AppModule) Name() string {
 	return types.ModuleName
 }
 
+// RegisterInvariants performs a no-op.
+func (AppModule) RegisterInvariants(_ sdk.InvariantRegistry) {}
+
 // RegisterServices registers module services.
 func (am AppModule) RegisterServices(cfg module.Configurator) {
 	types.RegisterMsgServer(cfg.MsgServer(), am.keeper)
@@ -148,7 +152,7 @@ func (am AppModule) RegisterServices(cfg module.Configurator) {
 
 // InitGenesis performs genesis initialization for the crisis module. It returns
 // no validator updates.
-func (am AppModule) InitGenesis(ctx sdk.Context, cdc codec.JSONCodec, data json.RawMessage) {
+func (am AppModule) InitGenesis(ctx sdk.Context, cdc codec.JSONCodec, data json.RawMessage) []abci.ValidatorUpdate {
 	start := time.Now()
 	var genesisState types.GenesisState
 	cdc.MustUnmarshalJSON(data, &genesisState)
@@ -158,6 +162,7 @@ func (am AppModule) InitGenesis(ctx sdk.Context, cdc codec.JSONCodec, data json.
 	if !am.skipGenesisInvariants {
 		am.keeper.AssertInvariants(ctx)
 	}
+	return []abci.ValidatorUpdate{}
 }
 
 // ExportGenesis returns the exported genesis state as raw bytes for the crisis
@@ -172,9 +177,9 @@ func (AppModule) ConsensusVersion() uint64 { return ConsensusVersion }
 
 // EndBlock returns the end blocker for the crisis module. It returns no validator
 // updates.
-func (am AppModule) EndBlock(ctx context.Context) error {
+func (am AppModule) EndBlock(ctx sdk.Context, _ abci.RequestEndBlock) []abci.ValidatorUpdate {
 	EndBlocker(ctx, *am.keeper)
-	return nil
+	return []abci.ValidatorUpdate{}
 }
 
 // App Wiring Setup
@@ -186,29 +191,28 @@ func init() {
 	)
 }
 
-type ModuleInputs struct {
+type CrisisInputs struct {
 	depinject.In
 
-	Config       *modulev1.Module
-	StoreService store.KVStoreService
-	Cdc          codec.Codec
-	AppOpts      servertypes.AppOptions `optional:"true"`
+	Config  *modulev1.Module
+	Key     *store.KVStoreKey
+	Cdc     codec.Codec
+	AppOpts servertypes.AppOptions `optional:"true"`
 
-	BankKeeper   types.SupplyKeeper
-	AddressCodec address.Codec
+	BankKeeper types.SupplyKeeper
 
 	// LegacySubspace is used solely for migration of x/params managed parameters
 	LegacySubspace exported.Subspace `optional:"true"`
 }
 
-type ModuleOutputs struct {
+type CrisisOutputs struct {
 	depinject.Out
 
 	Module       appmodule.AppModule
 	CrisisKeeper *keeper.Keeper
 }
 
-func ProvideModule(in ModuleInputs) ModuleOutputs {
+func ProvideModule(in CrisisInputs) CrisisOutputs {
 	var invalidCheckPeriod uint
 	if in.AppOpts != nil {
 		invalidCheckPeriod = cast.ToUint(in.AppOpts.Get(server.FlagInvCheckPeriod))
@@ -227,12 +231,11 @@ func ProvideModule(in ModuleInputs) ModuleOutputs {
 
 	k := keeper.NewKeeper(
 		in.Cdc,
-		in.StoreService,
+		in.Key,
 		invalidCheckPeriod,
 		in.BankKeeper,
 		feeCollectorName,
 		authority.String(),
-		in.AddressCodec,
 	)
 
 	var skipGenesisInvariants bool
@@ -242,5 +245,5 @@ func ProvideModule(in ModuleInputs) ModuleOutputs {
 
 	m := NewAppModule(k, skipGenesisInvariants, in.LegacySubspace)
 
-	return ModuleOutputs{CrisisKeeper: k, Module: m}
+	return CrisisOutputs{CrisisKeeper: k, Module: m}
 }

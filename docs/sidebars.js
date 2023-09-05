@@ -39,13 +39,8 @@ const sidebars = {
         },
         {
           type: "link",
-          label: "Awesome Cosmos",
-          href: "https://github.com/cosmos/awesome-cosmos",
-        },
-        {
-          type: "link",
           label: "Support",
-          href: "https://github.com/orgs/cosmos/discussions",
+          href: "https://discord.gg/cosmosnetwork",
         },
       ],
     },

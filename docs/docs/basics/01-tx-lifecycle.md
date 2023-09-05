@@ -8,7 +8,8 @@ sidebar_position: 1
 This document describes the lifecycle of a transaction from creation to committed state changes. Transaction definition is described in a [different doc](../core/01-transactions.md). The transaction is referred to as `Tx`.
 :::
 
-:::note Pre-requisite Readings
+:::note
+### Pre-requisite Readings
 
 * [Anatomy of a Cosmos SDK Application](./00-app-anatomy.md)
 :::
@@ -84,29 +85,24 @@ through several steps, beginning with decoding `Tx`.
 
 When `Tx` is received by the application from the underlying consensus engine (e.g. CometBFT ), it is still in its [encoded](../core/05-encoding.md) `[]byte` form and needs to be unmarshaled in order to be processed. Then, the [`runTx`](../core/00-baseapp.md#runtx-antehandler-runmsgs-posthandler) function is called to run in `runTxModeCheck` mode, meaning the function runs all checks but exits before executing messages and writing state changes.
 
-### ValidateBasic (deprecated)
+### ValidateBasic
 
 Messages ([`sdk.Msg`](../core/01-transactions.md#messages)) are extracted from transactions (`Tx`). The `ValidateBasic` method of the `sdk.Msg` interface implemented by the module developer is run for each transaction. 
 To discard obviously invalid messages, the `BaseApp` type calls the `ValidateBasic` method very early in the processing of the message in the [`CheckTx`](../core/00-baseapp.md#checktx) and [`DeliverTx`](../core/00-baseapp.md#delivertx) transactions.
 `ValidateBasic` can include only **stateless** checks (the checks that do not require access to the state). 
 
-:::warning
-The `ValidateBasic` method on messages has been deprecated in favor of validating messages directly in their respective [`Msg` services](../building-modules/03-msg-services.md#Validation).
-
-Read [RFC 001](https://docs.cosmos.network/main/rfc/rfc-001-tx-validation) for more details.
-:::
-
-:::note
-`BaseApp` still calls `ValidateBasic` on messages that implements that method for backwards compatibility.
-:::
-
 #### Guideline
 
-`ValidateBasic` should not be used anymore. Message validation should be performed in the `Msg` service when [handling a message](../building-modules/msg-services#Validation) in a module Msg Server.
+Gas is not charged when `ValidateBasic` is executed, so we recommend only performing all necessary stateless checks to enable middleware operations (for example, parsing the required signer accounts to validate a signature by a middleware) and stateless sanity checks not impacting performance of the `CheckTx` phase.
+Other validation operations must be performed when [handling a message](../building-modules/msg-services#Validation) in a module Msg Server.
+
+For example, if the message is to send coins from one address to another, `ValidateBasic` likely checks for non-empty addresses and a non-negative coin amount, but does not require knowledge of state such as the account balance of an address.
+
+See also [Msg Service Validation](../building-modules/03-msg-services.md#Validation).
 
 ### AnteHandler
 
-`AnteHandler`s even though optional, are in practice very often used to perform signature verification, gas calculation, fee deduction, and other core operations related to blockchain transactions.
+After the `ValidateBasic` checks, the `AnteHandler`s are run. Technically, they are optional, but in practice, they are very often present to perform signature verification, gas calculation, fee deduction, and other core operations related to blockchain transactions.
 
 A copy of the cached context is provided to the `AnteHandler`, which performs limited checks specified for the transaction type. Using a copy allows the `AnteHandler` to do stateful checks for `Tx` without modifying the last committed state, and revert back to the original if the execution fails.
 
@@ -155,40 +151,37 @@ must be in this proposer's mempool.
 ## State Changes
 
 The next step of consensus is to execute the transactions to fully validate them. All full-nodes
-that receive a block proposal from the correct proposer execute the transactions by calling the ABCI function `FinalizeBlock`. 
-As mentioned throughout the documentation `BeginBlock`, `ExecuteTx` and `EndBlock` are called within FinalizeBlock. 
-Although every full-node operates individually and locally, the outcome is always consistent and unequivocal. This is because the state changes brought about by the messages are predictable, and the transactions are specifically sequenced in the proposed block.
+that receive a block proposal from the correct proposer execute the transactions by calling the ABCI functions
+[`BeginBlock`](./00-app-anatomy.md#beginblocker-and-endblocker), `DeliverTx` for each transaction,
+and [`EndBlock`](./00-app-anatomy.md#beginblocker-and-endblocker). While each full-node runs everything
+locally, this process yields a single, unambiguous result, since the messages' state transitions are deterministic and transactions are
+explicitly ordered in the block proposal.
 
 ```text
 		-----------------------
 		|Receive Block Proposal|
 		-----------------------
-							|
-				v
-		-------------------------
-		| FinalizeBlock	        |
 		          |
 			  v
-				-------------------
-				| BeginBlock	    | 
-				-------------------
+		-----------------------
+		| BeginBlock	      |
+		-----------------------
 		          |
 			  v
-			--------------------
-			| ExecuteTx(tx0)   |
-			| ExecuteTx(tx1)   |
-			| ExecuteTx(tx2)   |
-			| ExecuteTx(tx3)   |
-			|	.	      |
-			|	.	      |
-			|	.	      |
-			-------------------
+		-----------------------
+		| DeliverTx(tx0)      |
+		| DeliverTx(tx1)      |
+		| DeliverTx(tx2)      |
+		| DeliverTx(tx3)      |
+		|	.	      |
+		|	.	      |
+		|	.	      |
+		-----------------------
 		          |
 			  v
-			--------------------
-			| EndBlock	      |
-			--------------------
-		-------------------------
+		-----------------------
+		| EndBlock	      |
+		-----------------------
 		          |
 			  v
 		-----------------------
@@ -201,16 +194,16 @@ Although every full-node operates individually and locally, the outcome is alway
 		-----------------------
 ```
 
-### Transaction Execution
+### DeliverTx
 
-The `FinalizeBlock` ABCI function defined in [`BaseApp`](../core/00-baseapp.md) does the bulk of the
+The `DeliverTx` ABCI function defined in [`BaseApp`](../core/00-baseapp.md) does the bulk of the
 state transitions: it is run for each transaction in the block in sequential order as committed
-to during consensus. Under the hood, transaction execution is almost identical to `CheckTx` but calls the
+to during consensus. Under the hood, `DeliverTx` is almost identical to `CheckTx` but calls the
 [`runTx`](../core/00-baseapp.md#runtx) function in deliver mode instead of check mode.
-Instead of using their `checkState`, full-nodes use `finalizeblock`:
+Instead of using their `checkState`, full-nodes use `deliverState`:
 
-* **Decoding:** Since `FinalizeBlock` is an ABCI call, `Tx` is received in the encoded `[]byte` form.
-  Nodes first unmarshal the transaction, using the [`TxConfig`](./app-anatomy#register-codec) defined in the app, then call `runTx` in `execModeFinalize`, which is very similar to `CheckTx` but also executes and writes state changes.
+* **Decoding:** Since `DeliverTx` is an ABCI call, `Tx` is received in the encoded `[]byte` form.
+  Nodes first unmarshal the transaction, using the [`TxConfig`](./app-anatomy#register-codec) defined in the app, then call `runTx` in `runTxModeDeliver`, which is very similar to `CheckTx` but also executes and writes state changes.
 
 * **Checks and `AnteHandler`:** Full-nodes call `validateBasicMsgs` and `AnteHandler` again. This second check
   happens because they may not have seen the same transactions during the addition to Mempool stage 
@@ -218,19 +211,19 @@ Instead of using their `checkState`, full-nodes use `finalizeblock`:
   `AnteHandler` does not compare `gas-prices` to the node's `min-gas-prices` since that value is local
   to each node - differing values across nodes yield nondeterministic results.
 
-* **`MsgServiceRouter`:** After `CheckTx` exits, `FinalizeBlock` continues to run
+* **`MsgServiceRouter`:** After `CheckTx` exits, `DeliverTx` continues to run
   [`runMsgs`](../core/00-baseapp.md#runtx-antehandler-runmsgs-posthandler) to fully execute each `Msg` within the transaction.
   Since the transaction may have messages from different modules, `BaseApp` needs to know which module
   to find the appropriate handler. This is achieved using `BaseApp`'s `MsgServiceRouter` so that it can be processed by the module's Protobuf [`Msg` service](../building-modules/03-msg-services.md).
   For `LegacyMsg` routing, the `Route` function is called via the [module manager](../building-modules/01-module-manager.md) to retrieve the route name and find the legacy [`Handler`](../building-modules/03-msg-services.md#handler-type) within the module.
   
-* **`Msg` service:** Protobuf `Msg` service is responsible for executing each message in the `Tx` and causes state transitions to persist in `finalizeBlockState`.
+* **`Msg` service:** Protobuf `Msg` service is responsible for executing each message in the `Tx` and causes state transitions to persist in `deliverTxState`.
 
 * **PostHandlers:** [`PostHandler`](../core/00-baseapp.md#posthandler)s run after the execution of the message. If they fail, the state change of `runMsgs`, as well of `PostHandlers`, are both reverted.
 
 * **Gas:** While a `Tx` is being delivered, a `GasMeter` is used to keep track of how much
   gas is being used; if execution completes, `GasUsed` is set and returned in the
-  `abci.ExecTxResult`. If execution halts because `BlockGasMeter` or `GasMeter` has run out or something else goes
+  `abci.ResponseDeliverTx`. If execution halts because `BlockGasMeter` or `GasMeter` has run out or something else goes
   wrong, a deferred function at the end appropriately errors or panics.
 
 If there are any failed state changes resulting from a `Tx` being invalid or `GasMeter` running out,

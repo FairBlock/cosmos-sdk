@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"cosmossdk.io/log"
+	log "github.com/cometbft/cometbft/libs/log"
 
 	"github.com/cosmos/cosmos-sdk/types/kv"
 )
@@ -16,7 +16,6 @@ import (
 // This method can be used to canonicalize JSON to be returned by GetSignBytes,
 // e.g. for the ledger integration.
 // If the passed JSON isn't valid it will return an error.
-// Deprecated: SortJSON was used for GetSignbytes, this is now automatic with amino signing
 func SortJSON(toSortJSON []byte) ([]byte, error) {
 	var c interface{}
 	err := json.Unmarshal(toSortJSON, &c)
@@ -32,7 +31,6 @@ func SortJSON(toSortJSON []byte) ([]byte, error) {
 
 // MustSortJSON is like SortJSON but panic if an error occurs, e.g., if
 // the passed JSON isn't valid.
-// Deprecated: SortJSON was used for GetSignbytes, this is now automatic with amino signing
 func MustSortJSON(toSortJSON []byte) []byte {
 	js, err := SortJSON(toSortJSON)
 	if err != nil {
@@ -77,13 +75,13 @@ func ParseTimeBytes(bz []byte) (time.Time, error) {
 }
 
 // Parses an encoded type using FormatTimeKey back into a time.Time
-func ParseTime(t any) (time.Time, error) {
+func ParseTime(T any) (time.Time, error) { //nolint:gocritic
 	var (
 		result time.Time
 		err    error
 	)
 
-	switch t := t.(type) {
+	switch t := T.(type) {
 	case time.Time:
 		result, err = t, nil
 	case []byte:
@@ -129,7 +127,7 @@ func AppendLengthPrefixedBytes(args ...[]byte) []byte {
 }
 
 // ParseLengthPrefixedBytes panics when store key length is not equal to the given length.
-func ParseLengthPrefixedBytes(key []byte, startIndex, sliceLength int) ([]byte, int) {
+func ParseLengthPrefixedBytes(key []byte, startIndex int, sliceLength int) ([]byte, int) {
 	neededLength := startIndex + sliceLength
 	endIndex := neededLength - 1
 	kv.AssertKeyAtLeastLength(key, neededLength)
@@ -143,4 +141,16 @@ func LogDeferred(logger log.Logger, f func() error) {
 	if err := f(); err != nil {
 		logger.Error(err.Error())
 	}
+}
+
+// SliceContains implements a generic function for checking if a slice contains
+// a certain value.
+func SliceContains[T comparable](elements []T, v T) bool {
+	for _, s := range elements {
+		if v == s {
+			return true
+		}
+	}
+
+	return false
 }

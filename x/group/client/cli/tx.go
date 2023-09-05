@@ -4,18 +4,15 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
-	"strings"
 
 	"github.com/spf13/cobra"
-
-	"cosmossdk.io/core/address"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/tx"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/version"
 	"github.com/cosmos/cosmos-sdk/x/group"
-	"github.com/cosmos/cosmos-sdk/x/group/internal/math"
 )
 
 const (
@@ -24,10 +21,8 @@ const (
 	FlagGroupPolicyAsAdmin = "group-policy-as-admin"
 )
 
-var errZeroGroupID = errors.New("group id cannot be 0")
-
 // TxCmd returns a root CLI command handler for all x/group transaction commands.
-func TxCmd(name string, ac address.Codec) *cobra.Command {
+func TxCmd(name string) *cobra.Command {
 	txCmd := &cobra.Command{
 		Use:                        name,
 		Short:                      "Group transaction subcommands",
@@ -44,7 +39,7 @@ func TxCmd(name string, ac address.Codec) *cobra.Command {
 		MsgCreateGroupWithPolicyCmd(),
 		MsgCreateGroupPolicyCmd(),
 		MsgUpdateGroupPolicyAdminCmd(),
-		MsgUpdateGroupPolicyDecisionPolicyCmd(ac),
+		MsgUpdateGroupPolicyDecisionPolicyCmd(),
 		MsgUpdateGroupPolicyMetadataCmd(),
 		MsgWithdrawProposalCmd(),
 		MsgSubmitProposalCmd(),
@@ -100,16 +95,13 @@ Where members.json contains:
 				return err
 			}
 
-			for _, member := range members {
-				if _, err := math.NewPositiveDecFromString(member.Weight); err != nil {
-					return fmt.Errorf("invalid weight %s for %s: weight must be positive", member.Weight, member.Address)
-				}
-			}
-
 			msg := &group.MsgCreateGroup{
 				Admin:    clientCtx.GetFromAddress().String(),
 				Members:  members,
 				Metadata: args[1],
+			}
+			if err = msg.ValidateBasic(); err != nil {
+				return fmt.Errorf("message validation failed: %w", err)
 			}
 
 			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
@@ -165,25 +157,18 @@ Set a member's weight to "0" to delete it.
 				return err
 			}
 
-			for _, member := range members {
-				if _, err := math.NewNonNegativeDecFromString(member.Weight); err != nil {
-					return fmt.Errorf("invalid weight %s for %s: weight must not be negative", member.Weight, member.Address)
-				}
-			}
-
 			groupID, err := strconv.ParseUint(args[1], 10, 64)
 			if err != nil {
 				return err
-			}
-
-			if groupID == 0 {
-				return errZeroGroupID
 			}
 
 			msg := &group.MsgUpdateGroupMembers{
 				Admin:         clientCtx.GetFromAddress().String(),
 				MemberUpdates: members,
 				GroupId:       groupID,
+			}
+			if err = msg.ValidateBasic(); err != nil {
+				return fmt.Errorf("message validation failed: %w", err)
 			}
 
 			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
@@ -202,7 +187,8 @@ func MsgUpdateGroupAdminCmd() *cobra.Command {
 		Short: "Update a group's admin",
 		Args:  cobra.ExactArgs(3),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := cmd.Flags().Set(flags.FlagFrom, args[0]); err != nil {
+			err := cmd.Flags().Set(flags.FlagFrom, args[0])
+			if err != nil {
 				return err
 			}
 
@@ -216,18 +202,13 @@ func MsgUpdateGroupAdminCmd() *cobra.Command {
 				return err
 			}
 
-			if groupID == 0 {
-				return errZeroGroupID
-			}
-
-			if strings.EqualFold(args[0], args[2]) {
-				return errors.New("new admin cannot be the same as the current admin")
-			}
-
 			msg := &group.MsgUpdateGroupAdmin{
 				Admin:    clientCtx.GetFromAddress().String(),
 				NewAdmin: args[2],
 				GroupId:  groupID,
+			}
+			if err = msg.ValidateBasic(); err != nil {
+				return fmt.Errorf("message validation failed: %w", err)
 			}
 
 			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
@@ -261,14 +242,13 @@ func MsgUpdateGroupMetadataCmd() *cobra.Command {
 				return err
 			}
 
-			if groupID == 0 {
-				return errZeroGroupID
-			}
-
 			msg := &group.MsgUpdateGroupMetadata{
 				Admin:    clientCtx.GetFromAddress().String(),
 				Metadata: args[2],
 				GroupId:  groupID,
+			}
+			if err = msg.ValidateBasic(); err != nil {
+				return fmt.Errorf("message validation failed: %w", err)
 			}
 
 			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
@@ -342,18 +322,8 @@ and policy.json contains:
 				return err
 			}
 
-			for _, member := range members {
-				if _, err := math.NewPositiveDecFromString(member.Weight); err != nil {
-					return fmt.Errorf("invalid weight %s for %s: weight must be positive", member.Weight, member.Address)
-				}
-			}
-
 			policy, err := parseDecisionPolicy(clientCtx.Codec, args[4])
 			if err != nil {
-				return err
-			}
-
-			if err := policy.ValidateBasic(); err != nil {
 				return err
 			}
 
@@ -367,6 +337,10 @@ and policy.json contains:
 			)
 			if err != nil {
 				return err
+			}
+
+			if err = msg.ValidateBasic(); err != nil {
+				return fmt.Errorf("message validation failed: %w", err)
 			}
 
 			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
@@ -424,16 +398,8 @@ Here, we can use percentage decision policy when needed, where 0 < percentage <=
 				return err
 			}
 
-			if groupID == 0 {
-				return errZeroGroupID
-			}
-
 			policy, err := parseDecisionPolicy(clientCtx.Codec, args[3])
 			if err != nil {
-				return err
-			}
-
-			if err := policy.ValidateBasic(); err != nil {
 				return err
 			}
 
@@ -445,6 +411,9 @@ Here, we can use percentage decision policy when needed, where 0 < percentage <=
 			)
 			if err != nil {
 				return err
+			}
+			if err = msg.ValidateBasic(); err != nil {
+				return fmt.Errorf("message validation failed: %w", err)
 			}
 
 			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
@@ -463,12 +432,9 @@ func MsgUpdateGroupPolicyAdminCmd() *cobra.Command {
 		Short: "Update a group policy admin",
 		Args:  cobra.ExactArgs(3),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := cmd.Flags().Set(flags.FlagFrom, args[0]); err != nil {
+			err := cmd.Flags().Set(flags.FlagFrom, args[0])
+			if err != nil {
 				return err
-			}
-
-			if strings.EqualFold(args[0], args[2]) {
-				return errors.New("new admin cannot be the same as the current admin")
 			}
 
 			clientCtx, err := client.GetClientTxContext(cmd)
@@ -481,6 +447,9 @@ func MsgUpdateGroupPolicyAdminCmd() *cobra.Command {
 				GroupPolicyAddress: args[1],
 				NewAdmin:           args[2],
 			}
+			if err = msg.ValidateBasic(); err != nil {
+				return fmt.Errorf("message validation failed: %w", err)
+			}
 
 			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
 		},
@@ -492,7 +461,7 @@ func MsgUpdateGroupPolicyAdminCmd() *cobra.Command {
 }
 
 // MsgUpdateGroupPolicyDecisionPolicyCmd creates a CLI command for Msg/UpdateGroupPolicyDecisionPolicy.
-func MsgUpdateGroupPolicyDecisionPolicyCmd(ac address.Codec) *cobra.Command {
+func MsgUpdateGroupPolicyDecisionPolicyCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "update-group-policy-decision-policy [admin] [group-policy-account] [decision-policy-json-file]",
 		Short: "Update a group policy's decision policy",
@@ -513,7 +482,7 @@ func MsgUpdateGroupPolicyDecisionPolicyCmd(ac address.Codec) *cobra.Command {
 				return err
 			}
 
-			accountAddress, err := ac.StringToBytes(args[1])
+			accountAddress, err := sdk.AccAddressFromBech32(args[1])
 			if err != nil {
 				return err
 			}
@@ -525,6 +494,10 @@ func MsgUpdateGroupPolicyDecisionPolicyCmd(ac address.Codec) *cobra.Command {
 			)
 			if err != nil {
 				return err
+			}
+
+			if err = msg.ValidateBasic(); err != nil {
+				return fmt.Errorf("message validation failed: %w", err)
 			}
 
 			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
@@ -543,7 +516,8 @@ func MsgUpdateGroupPolicyMetadataCmd() *cobra.Command {
 		Short: "Update a group policy metadata",
 		Args:  cobra.ExactArgs(3),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := cmd.Flags().Set(flags.FlagFrom, args[0]); err != nil {
+			err := cmd.Flags().Set(flags.FlagFrom, args[0])
+			if err != nil {
 				return err
 			}
 
@@ -556,6 +530,9 @@ func MsgUpdateGroupPolicyMetadataCmd() *cobra.Command {
 				Admin:              clientCtx.GetFromAddress().String(),
 				GroupPolicyAddress: args[1],
 				Metadata:           args[2],
+			}
+			if err = msg.ValidateBasic(); err != nil {
+				return fmt.Errorf("message validation failed: %w", err)
 			}
 
 			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
@@ -589,13 +566,13 @@ Parameters:
 		"from_address": "cosmos1...",
 		"to_address": "cosmos1...",
 		"amount":[{"denom": "stake","amount": "10"}]
+		"title": "My proposal",
+		"summary": "This is a proposal to send 10 stake to cosmos1...",
 	}
 	],
 	// metadata can be any of base64 encoded, raw text, stringified json, IPFS link to json
 	// see below for example metadata
 	"metadata": "4pIMOgIGx1vZGU=", // base64-encoded metadata
-	"title": "My proposal",
-	"summary": "This is a proposal to send 10 stake to cosmos1...",
 	"proposers": ["cosmos1...", "cosmos1..."],
 }
 
@@ -621,10 +598,7 @@ metadata example:
 			if prop.Proposers == nil || len(prop.Proposers) == 0 {
 				return errors.New("no proposers specified in proposal")
 			}
-			err = cmd.Flags().Set(flags.FlagFrom, prop.Proposers[0])
-			if err != nil {
-				return err
-			}
+			cmd.Flags().Set(flags.FlagFrom, prop.Proposers[0])
 
 			clientCtx, err := client.GetClientTxContext(cmd)
 			if err != nil {
@@ -637,6 +611,7 @@ metadata example:
 			}
 
 			execStr, _ := cmd.Flags().GetString(FlagExec)
+
 			msg, err := group.NewMsgSubmitProposal(
 				prop.GroupPolicyAddress,
 				prop.Proposers,
@@ -648,6 +623,10 @@ metadata example:
 			)
 			if err != nil {
 				return err
+			}
+
+			if err = msg.ValidateBasic(); err != nil {
+				return fmt.Errorf("message validation failed: %w", err)
 			}
 
 			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
@@ -674,7 +653,8 @@ Parameters:
 `,
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := cmd.Flags().Set(flags.FlagFrom, args[1]); err != nil {
+			err := cmd.Flags().Set(flags.FlagFrom, args[1])
+			if err != nil {
 				return err
 			}
 
@@ -688,13 +668,17 @@ Parameters:
 				return err
 			}
 
-			if proposalID == 0 {
-				return fmt.Errorf("invalid proposal id: %d", proposalID)
-			}
-
 			msg := &group.MsgWithdrawProposal{
 				ProposalId: proposalID,
 				Address:    clientCtx.GetFromAddress().String(),
+			}
+
+			if err != nil {
+				return err
+			}
+
+			if err = msg.ValidateBasic(); err != nil {
+				return fmt.Errorf("message validation failed: %w", err)
 			}
 
 			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
@@ -755,6 +739,13 @@ Parameters:
 				Metadata:   args[3],
 				Exec:       execFromString(execStr),
 			}
+			if err != nil {
+				return err
+			}
+
+			if err = msg.ValidateBasic(); err != nil {
+				return fmt.Errorf("message validation failed: %w", err)
+			}
 
 			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
 		},
@@ -787,6 +778,13 @@ func MsgExecCmd() *cobra.Command {
 				ProposalId: proposalID,
 				Executor:   clientCtx.GetFromAddress().String(),
 			}
+			if err != nil {
+				return err
+			}
+
+			if err = msg.ValidateBasic(); err != nil {
+				return fmt.Errorf("message validation failed: %w", err)
+			}
 
 			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
 		},
@@ -811,10 +809,7 @@ Parameters:
 		`,
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			err := cmd.Flags().Set(flags.FlagFrom, args[0])
-			if err != nil {
-				return err
-			}
+			cmd.Flags().Set(flags.FlagFrom, args[0])
 			clientCtx, err := client.GetClientTxContext(cmd)
 			if err != nil {
 				return err
@@ -825,13 +820,12 @@ Parameters:
 				return err
 			}
 
-			if groupID == 0 {
-				return errZeroGroupID
-			}
-
 			msg := &group.MsgLeaveGroup{
 				Address: clientCtx.GetFromAddress().String(),
 				GroupId: groupID,
+			}
+			if err = msg.ValidateBasic(); err != nil {
+				return fmt.Errorf("message validation failed: %w", err)
 			}
 
 			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)

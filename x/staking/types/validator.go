@@ -7,12 +7,10 @@ import (
 	"strings"
 	"time"
 
-	abci "github.com/cometbft/cometbft/abci/types"
-	cmtprotocrypto "github.com/cometbft/cometbft/proto/tendermint/crypto"
-
-	"cosmossdk.io/core/address"
-	"cosmossdk.io/errors"
 	"cosmossdk.io/math"
+	abci "github.com/cometbft/cometbft/abci/types"
+	tmprotocrypto "github.com/cometbft/cometbft/proto/tendermint/crypto"
+	"sigs.k8s.io/yaml"
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
@@ -41,14 +39,16 @@ var (
 var _ ValidatorI = Validator{}
 
 // NewValidator constructs a new Validator
-func NewValidator(operator string, pubKey cryptotypes.PubKey, description Description) (Validator, error) {
+//
+//nolint:interfacer
+func NewValidator(operator sdk.ValAddress, pubKey cryptotypes.PubKey, description Description) (Validator, error) {
 	pkAny, err := codectypes.NewAnyWithValue(pubKey)
 	if err != nil {
 		return Validator{}, err
 	}
 
 	return Validator{
-		OperatorAddress:         operator,
+		OperatorAddress:         operator.String(),
 		ConsensusPubkey:         pkAny,
 		Jailed:                  false,
 		Status:                  Unbonded,
@@ -63,14 +63,26 @@ func NewValidator(operator string, pubKey cryptotypes.PubKey, description Descri
 	}, nil
 }
 
-// Validators is a collection of Validator
-type Validators struct {
-	Validators     []Validator
-	ValidatorCodec address.Codec
+// String implements the Stringer interface for a Validator object.
+func (v Validator) String() string {
+	bz, err := codec.ProtoMarshalJSON(&v, nil)
+	if err != nil {
+		panic(err)
+	}
+
+	out, err := yaml.JSONToYAML(bz)
+	if err != nil {
+		panic(err)
+	}
+
+	return string(out)
 }
 
+// Validators is a collection of Validator
+type Validators []Validator
+
 func (v Validators) String() (out string) {
-	for _, val := range v.Validators {
+	for _, val := range v {
 		out += val.String() + "\n"
 	}
 
@@ -79,7 +91,7 @@ func (v Validators) String() (out string) {
 
 // ToSDKValidators -  convenience function convert []Validator to []sdk.ValidatorI
 func (v Validators) ToSDKValidators() (validators []ValidatorI) {
-	for _, val := range v.Validators {
+	for _, val := range v {
 		validators = append(validators, val)
 	}
 
@@ -93,26 +105,17 @@ func (v Validators) Sort() {
 
 // Implements sort interface
 func (v Validators) Len() int {
-	return len(v.Validators)
+	return len(v)
 }
 
 // Implements sort interface
 func (v Validators) Less(i, j int) bool {
-	vi, err := v.ValidatorCodec.StringToBytes(v.Validators[i].GetOperator())
-	if err != nil {
-		panic(err)
-	}
-	vj, err := v.ValidatorCodec.StringToBytes(v.Validators[j].GetOperator())
-	if err != nil {
-		panic(err)
-	}
-
-	return bytes.Compare(vi, vj) == -1
+	return bytes.Compare(v[i].GetOperator().Bytes(), v[j].GetOperator().Bytes()) == -1
 }
 
 // Implements sort interface
 func (v Validators) Swap(i, j int) {
-	v.Validators[i], v.Validators[j] = v.Validators[j], v.Validators[i]
+	v[i], v[j] = v[j], v[i]
 }
 
 // ValidatorsByVotingPower implements sort.Interface for []Validator based on
@@ -142,8 +145,8 @@ func (valz ValidatorsByVotingPower) Swap(i, j int) {
 
 // UnpackInterfaces implements UnpackInterfacesMessage.UnpackInterfaces
 func (v Validators) UnpackInterfaces(c codectypes.AnyUnpacker) error {
-	for i := range v.Validators {
-		if err := v.Validators[i].UnpackInterfaces(c); err != nil {
+	for i := range v {
+		if err := v[i].UnpackInterfaces(c); err != nil {
 			return err
 		}
 	}
@@ -199,6 +202,12 @@ func NewDescription(moniker, identity, website, securityContact, details string)
 	}
 }
 
+// String implements the Stringer interface for a Description object.
+func (d Description) String() string {
+	out, _ := yaml.Marshal(d)
+	return string(out)
+}
+
 // UpdateDescription updates the fields of a given description. An error is
 // returned if the resulting description contains an invalid length.
 func (d Description) UpdateDescription(d2 Description) (Description, error) {
@@ -234,23 +243,23 @@ func (d Description) UpdateDescription(d2 Description) (Description, error) {
 // EnsureLength ensures the length of a validator's description.
 func (d Description) EnsureLength() (Description, error) {
 	if len(d.Moniker) > MaxMonikerLength {
-		return d, errors.Wrapf(sdkerrors.ErrInvalidRequest, "invalid moniker length; got: %d, max: %d", len(d.Moniker), MaxMonikerLength)
+		return d, sdkerrors.Wrapf(sdkerrors.ErrInvalidRequest, "invalid moniker length; got: %d, max: %d", len(d.Moniker), MaxMonikerLength)
 	}
 
 	if len(d.Identity) > MaxIdentityLength {
-		return d, errors.Wrapf(sdkerrors.ErrInvalidRequest, "invalid identity length; got: %d, max: %d", len(d.Identity), MaxIdentityLength)
+		return d, sdkerrors.Wrapf(sdkerrors.ErrInvalidRequest, "invalid identity length; got: %d, max: %d", len(d.Identity), MaxIdentityLength)
 	}
 
 	if len(d.Website) > MaxWebsiteLength {
-		return d, errors.Wrapf(sdkerrors.ErrInvalidRequest, "invalid website length; got: %d, max: %d", len(d.Website), MaxWebsiteLength)
+		return d, sdkerrors.Wrapf(sdkerrors.ErrInvalidRequest, "invalid website length; got: %d, max: %d", len(d.Website), MaxWebsiteLength)
 	}
 
 	if len(d.SecurityContact) > MaxSecurityContactLength {
-		return d, errors.Wrapf(sdkerrors.ErrInvalidRequest, "invalid security contact length; got: %d, max: %d", len(d.SecurityContact), MaxSecurityContactLength)
+		return d, sdkerrors.Wrapf(sdkerrors.ErrInvalidRequest, "invalid security contact length; got: %d, max: %d", len(d.SecurityContact), MaxSecurityContactLength)
 	}
 
 	if len(d.Details) > MaxDetailsLength {
-		return d, errors.Wrapf(sdkerrors.ErrInvalidRequest, "invalid details length; got: %d, max: %d", len(d.Details), MaxDetailsLength)
+		return d, sdkerrors.Wrapf(sdkerrors.ErrInvalidRequest, "invalid details length; got: %d, max: %d", len(d.Details), MaxDetailsLength)
 	}
 
 	return d, nil
@@ -304,24 +313,24 @@ func (v Validator) InvalidExRate() bool {
 }
 
 // calculate the token worth of provided shares
-func (v Validator) TokensFromShares(shares math.LegacyDec) math.LegacyDec {
+func (v Validator) TokensFromShares(shares sdk.Dec) math.LegacyDec {
 	return (shares.MulInt(v.Tokens)).Quo(v.DelegatorShares)
 }
 
 // calculate the token worth of provided shares, truncated
-func (v Validator) TokensFromSharesTruncated(shares math.LegacyDec) math.LegacyDec {
+func (v Validator) TokensFromSharesTruncated(shares sdk.Dec) math.LegacyDec {
 	return (shares.MulInt(v.Tokens)).QuoTruncate(v.DelegatorShares)
 }
 
 // TokensFromSharesRoundUp returns the token worth of provided shares, rounded
 // up.
-func (v Validator) TokensFromSharesRoundUp(shares math.LegacyDec) math.LegacyDec {
+func (v Validator) TokensFromSharesRoundUp(shares sdk.Dec) math.LegacyDec {
 	return (shares.MulInt(v.Tokens)).QuoRoundUp(v.DelegatorShares)
 }
 
 // SharesFromTokens returns the shares of a delegation given a bond amount. It
 // returns an error if the validator has no tokens.
-func (v Validator) SharesFromTokens(amt math.Int) (math.LegacyDec, error) {
+func (v Validator) SharesFromTokens(amt math.Int) (sdk.Dec, error) {
 	if v.Tokens.IsZero() {
 		return math.LegacyZeroDec(), ErrInsufficientShares
 	}
@@ -331,12 +340,12 @@ func (v Validator) SharesFromTokens(amt math.Int) (math.LegacyDec, error) {
 
 // SharesFromTokensTruncated returns the truncated shares of a delegation given
 // a bond amount. It returns an error if the validator has no tokens.
-func (v Validator) SharesFromTokensTruncated(amt math.Int) (math.LegacyDec, error) {
+func (v Validator) SharesFromTokensTruncated(amt math.Int) (sdk.Dec, error) {
 	if v.Tokens.IsZero() {
 		return math.LegacyZeroDec(), ErrInsufficientShares
 	}
 
-	return v.GetDelegatorShares().MulInt(amt).QuoTruncate(math.LegacyNewDecFromInt(v.GetTokens())), nil
+	return v.GetDelegatorShares().MulInt(amt).QuoTruncate(sdk.NewDecFromInt(v.GetTokens())), nil
 }
 
 // get the bonded tokens which the validator holds
@@ -371,12 +380,12 @@ func (v Validator) UpdateStatus(newStatus BondStatus) Validator {
 }
 
 // AddTokensFromDel adds tokens to a validator
-func (v Validator) AddTokensFromDel(amount math.Int) (Validator, math.LegacyDec) {
+func (v Validator) AddTokensFromDel(amount math.Int) (Validator, sdk.Dec) {
 	// calculate the shares to issue
-	var issuedShares math.LegacyDec
+	var issuedShares sdk.Dec
 	if v.DelegatorShares.IsZero() {
 		// the first delegation to a validator sets the exchange rate to one
-		issuedShares = math.LegacyNewDecFromInt(amount)
+		issuedShares = sdk.NewDecFromInt(amount)
 	} else {
 		shares, err := v.SharesFromTokens(amount)
 		if err != nil {
@@ -411,7 +420,7 @@ func (v Validator) RemoveTokens(tokens math.Int) Validator {
 // NOTE: because token fractions are left in the valiadator,
 //
 //	the exchange rate of future shares of this validator can increase.
-func (v Validator) RemoveDelShares(delShares math.LegacyDec) (Validator, math.Int) {
+func (v Validator) RemoveDelShares(delShares sdk.Dec) (Validator, math.Int) {
 	remainingShares := v.DelegatorShares.Sub(delShares)
 
 	var issuedTokens math.Int
@@ -459,48 +468,50 @@ func (v *Validator) Equal(v2 *Validator) bool {
 func (v Validator) IsJailed() bool        { return v.Jailed }
 func (v Validator) GetMoniker() string    { return v.Description.Moniker }
 func (v Validator) GetStatus() BondStatus { return v.Status }
-func (v Validator) GetOperator() string {
-	return v.OperatorAddress
+func (v Validator) GetOperator() sdk.ValAddress {
+	if v.OperatorAddress == "" {
+		return nil
+	}
+	addr, err := sdk.ValAddressFromBech32(v.OperatorAddress)
+	if err != nil {
+		panic(err)
+	}
+	return addr
 }
 
 // ConsPubKey returns the validator PubKey as a cryptotypes.PubKey.
 func (v Validator) ConsPubKey() (cryptotypes.PubKey, error) {
 	pk, ok := v.ConsensusPubkey.GetCachedValue().(cryptotypes.PubKey)
 	if !ok {
-		return nil, errors.Wrapf(sdkerrors.ErrInvalidType, "expecting cryptotypes.PubKey, got %T", pk)
+		return nil, sdkerrors.Wrapf(sdkerrors.ErrInvalidType, "expecting cryptotypes.PubKey, got %T", pk)
 	}
 
 	return pk, nil
 }
 
-// Deprecated: use CmtConsPublicKey instead
-func (v Validator) TmConsPublicKey() (cmtprotocrypto.PublicKey, error) {
-	return v.CmtConsPublicKey()
-}
-
-// CmtConsPublicKey casts Validator.ConsensusPubkey to cmtprotocrypto.PubKey.
-func (v Validator) CmtConsPublicKey() (cmtprotocrypto.PublicKey, error) {
+// TmConsPublicKey casts Validator.ConsensusPubkey to tmprotocrypto.PubKey.
+func (v Validator) TmConsPublicKey() (tmprotocrypto.PublicKey, error) {
 	pk, err := v.ConsPubKey()
 	if err != nil {
-		return cmtprotocrypto.PublicKey{}, err
+		return tmprotocrypto.PublicKey{}, err
 	}
 
-	tmPk, err := cryptocodec.ToCmtProtoPublicKey(pk)
+	tmPk, err := cryptocodec.ToTmProtoPublicKey(pk)
 	if err != nil {
-		return cmtprotocrypto.PublicKey{}, err
+		return tmprotocrypto.PublicKey{}, err
 	}
 
 	return tmPk, nil
 }
 
 // GetConsAddr extracts Consensus key address
-func (v Validator) GetConsAddr() ([]byte, error) {
+func (v Validator) GetConsAddr() (sdk.ConsAddress, error) {
 	pk, ok := v.ConsensusPubkey.GetCachedValue().(cryptotypes.PubKey)
 	if !ok {
-		return nil, errors.Wrapf(sdkerrors.ErrInvalidType, "expecting cryptotypes.PubKey, got %T", pk)
+		return nil, sdkerrors.Wrapf(sdkerrors.ErrInvalidType, "expecting cryptotypes.PubKey, got %T", pk)
 	}
 
-	return pk.Address().Bytes(), nil
+	return sdk.ConsAddress(pk.Address()), nil
 }
 
 func (v Validator) GetTokens() math.Int       { return v.Tokens }

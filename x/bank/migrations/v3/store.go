@@ -1,13 +1,10 @@
 package v3
 
 import (
-	"cosmossdk.io/core/store"
-	"cosmossdk.io/log"
-	"cosmossdk.io/store/prefix"
-	storetypes "cosmossdk.io/store/types"
-
+	"github.com/cometbft/cometbft/libs/log"
 	"github.com/cosmos/cosmos-sdk/codec"
-	"github.com/cosmos/cosmos-sdk/runtime"
+	"github.com/cosmos/cosmos-sdk/store/prefix"
+	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/address"
 	v2 "github.com/cosmos/cosmos-sdk/x/bank/migrations/v2"
@@ -20,8 +17,8 @@ import (
 // - Migrate coin storage to save only amount.
 // - Add an additional reverse index from denomination to address.
 // - Remove duplicate denom from denom metadata store key.
-func MigrateStore(ctx sdk.Context, storeService store.KVStoreService, cdc codec.BinaryCodec) error {
-	store := runtime.KVStoreAdapter(storeService.OpenKVStore(ctx))
+func MigrateStore(ctx sdk.Context, storeKey storetypes.StoreKey, cdc codec.BinaryCodec) error {
+	store := ctx.KVStore(storeKey)
 	err := addDenomReverseIndex(store, cdc, ctx.Logger())
 	if err != nil {
 		return err
@@ -30,7 +27,7 @@ func MigrateStore(ctx sdk.Context, storeService store.KVStoreService, cdc codec.
 	return migrateDenomMetadata(store, ctx.Logger())
 }
 
-func addDenomReverseIndex(store storetypes.KVStore, cdc codec.BinaryCodec, logger log.Logger) error {
+func addDenomReverseIndex(store sdk.KVStore, cdc codec.BinaryCodec, logger log.Logger) error {
 	oldBalancesStore := prefix.NewStore(store, v2.BalancesPrefix)
 
 	oldBalancesIter := oldBalancesStore.Iterator(nil, nil)
@@ -59,7 +56,7 @@ func addDenomReverseIndex(store storetypes.KVStore, cdc codec.BinaryCodec, logge
 			return err
 		}
 
-		newStore := prefix.NewStore(store, CreateAccountBalancesPrefix(addr))
+		newStore := prefix.NewStore(store, types.CreateAccountBalancesPrefix(addr))
 		newStore.Set([]byte(coin.Denom), bz)
 
 		denomPrefixStore, ok := denomPrefixStores[balance.Denom]
@@ -76,7 +73,7 @@ func addDenomReverseIndex(store storetypes.KVStore, cdc codec.BinaryCodec, logge
 	return nil
 }
 
-func migrateDenomMetadata(store storetypes.KVStore, logger log.Logger) error {
+func migrateDenomMetadata(store sdk.KVStore, logger log.Logger) error {
 	oldDenomMetaDataStore := prefix.NewStore(store, v2.DenomMetadataPrefix)
 
 	oldDenomMetaDataIter := oldDenomMetaDataStore.Iterator(nil, nil)
@@ -95,9 +92,4 @@ func migrateDenomMetadata(store storetypes.KVStore, logger log.Logger) error {
 	}
 
 	return nil
-}
-
-// CreateAccountBalancesPrefix creates the prefix for an account's balances.
-func CreateAccountBalancesPrefix(addr []byte) []byte {
-	return append(types.BalancesPrefix.Bytes(), address.MustLengthPrefix(addr)...)
 }

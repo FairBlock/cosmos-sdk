@@ -1,8 +1,7 @@
 package v3
 
 import (
-	sdkmath "cosmossdk.io/math"
-
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/distribution/types"
 )
 
@@ -12,8 +11,8 @@ import (
 // Reset of the deprecated rewards to zero.
 func MigrateJSON(oldState *types.GenesisState) *types.GenesisState {
 	// reset deprecated rewards to zero
-	oldState.Params.BaseProposerReward = sdkmath.LegacyZeroDec()
-	oldState.Params.BonusProposerReward = sdkmath.LegacyZeroDec()
+	oldState.Params.BaseProposerReward = sdk.ZeroDec()
+	oldState.Params.BonusProposerReward = sdk.ZeroDec()
 
 	return oldState
 }

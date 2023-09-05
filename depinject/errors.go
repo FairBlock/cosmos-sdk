@@ -4,13 +4,14 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/cockroachdb/errors"
+	"github.com/pkg/errors"
 )
 
 // ErrMultipleImplicitInterfaceBindings defines an error condition where an attempt was made to implicitly bind
 // Interface to a concrete type, but the container was unable to come to a resolution because multiple Matches
 // were found.
 type ErrMultipleImplicitInterfaceBindings struct {
+	error
 	Interface reflect.Type
 	Matches   []reflect.Type
 }
@@ -37,6 +38,7 @@ type ErrNoTypeForExplicitBindingFound struct {
 	Implementation string
 	Interface      string
 	ModuleName     string
+	error
 }
 
 func newErrNoTypeForExplicitBindingFound(p interfaceBinding) ErrNoTypeForExplicitBindingFound {
@@ -56,10 +58,10 @@ func (err ErrNoTypeForExplicitBindingFound) Error() string {
 	if err.ModuleName != "" {
 		return fmt.Sprintf("No type for explicit binding found.  Given the explicit interface binding %s in module %s, a provider of type %s was not found.",
 			err.Interface, err.ModuleName, err.Implementation)
+	} else {
+		return fmt.Sprintf("No type for explicit binding found.  Given the explicit interface binding %s, a provider of type %s was not found.",
+			err.Interface, err.Implementation)
 	}
-
-	return fmt.Sprintf("No type for explicit binding found.  Given the explicit interface binding %s, a provider of type %s was not found.",
-		err.Interface, err.Implementation)
 }
 
 func duplicateDefinitionError(typ reflect.Type, duplicateLoc Location, existingLoc string) error {

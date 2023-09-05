@@ -1,8 +1,7 @@
 package types
 
 import (
-	context "context"
-
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 )
 
@@ -24,4 +23,4 @@ import (
 // function.
 //
 // Please also refer to docs/core/upgrade.md for more information.
-type UpgradeHandler func(ctx context.Context, plan Plan, fromVM module.VersionMap) (module.VersionMap, error)
+type UpgradeHandler func(ctx sdk.Context, plan Plan, fromVM module.VersionMap) (module.VersionMap, error)

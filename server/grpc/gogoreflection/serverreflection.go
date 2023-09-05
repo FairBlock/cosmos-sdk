@@ -46,8 +46,7 @@ import (
 	"sort"
 	"sync"
 
-	//nolint: staticcheck // keep this import for backward compatibility
-	"github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/proto" //nolint:staticcheck
 	dpb "github.com/golang/protobuf/protoc-gen-go/descriptor"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -202,12 +201,12 @@ func (s *serverReflectionServer) fileDescForType(st reflect.Type) (*dpb.FileDesc
 func decodeFileDesc(enc []byte) (*dpb.FileDescriptorProto, error) {
 	raw, err := decompress(enc)
 	if err != nil {
-		return nil, fmt.Errorf("failed to decompress enc: %w", err)
+		return nil, fmt.Errorf("failed to decompress enc: %v", err)
 	}
 
 	fd := new(dpb.FileDescriptorProto)
 	if err := proto.Unmarshal(raw, fd); err != nil {
-		return nil, fmt.Errorf("bad descriptor: %w", err)
+		return nil, fmt.Errorf("bad descriptor: %v", err)
 	}
 	return fd, nil
 }
@@ -216,11 +215,11 @@ func decodeFileDesc(enc []byte) (*dpb.FileDescriptorProto, error) {
 func decompress(b []byte) ([]byte, error) {
 	r, err := gzip.NewReader(bytes.NewReader(b))
 	if err != nil {
-		return nil, fmt.Errorf("bad gzipped descriptor: %w", err)
+		return nil, fmt.Errorf("bad gzipped descriptor: %v", err)
 	}
 	out, err := io.ReadAll(r)
 	if err != nil {
-		return nil, fmt.Errorf("bad gzipped descriptor: %w", err)
+		return nil, fmt.Errorf("bad gzipped descriptor: %v", err)
 	}
 	return out, nil
 }
@@ -290,8 +289,8 @@ func fileDescWithDependencies(fd *dpb.FileDescriptorProto, sentFileDescriptors m
 }
 
 // fileDescEncodingByFilename finds the file descriptor for given filename,
-// finds all of its previously unsent transitive dependencies, does marshaling
-// on them, and returns the marshaled result.
+// finds all of its previously unsent transitive dependencies, does marshalling
+// on them, and returns the marshalled result.
 func (s *serverReflectionServer) fileDescEncodingByFilename(name string, sentFileDescriptors map[string]bool) ([][]byte, error) {
 	enc := getFileDescriptor(name)
 	if enc == nil {
@@ -324,7 +323,7 @@ func parseMetadata(meta interface{}) ([]byte, bool) {
 
 // fileDescEncodingContainingSymbol finds the file descriptor containing the
 // given symbol, finds all of its previously unsent transitive dependencies,
-// does marshaling on them, and returns the marshaled result. The given symbol
+// does marshalling on them, and returns the marshalled result. The given symbol
 // can be a type, a service or a method.
 func (s *serverReflectionServer) fileDescEncodingContainingSymbol(name string, sentFileDescriptors map[string]bool) ([][]byte, error) {
 	_, symbols := s.getSymbols()
@@ -349,7 +348,7 @@ func (s *serverReflectionServer) fileDescEncodingContainingSymbol(name string, s
 
 // fileDescEncodingContainingExtension finds the file descriptor containing
 // given extension, finds all of its previously unsent transitive dependencies,
-// does marshaling on them, and returns the marshaled result.
+// does marshalling on them, and returns the marshalled result.
 func (s *serverReflectionServer) fileDescEncodingContainingExtension(typeName string, extNum int32, sentFileDescriptors map[string]bool) ([][]byte, error) {
 	st, err := typeForName(typeName)
 	if err != nil {
@@ -387,60 +386,60 @@ func (s *serverReflectionServer) ServerReflectionInfo(stream rpb.ServerReflectio
 			return err
 		}
 
-		out := &rpb.ServerReflectionResponse{ //nolint:staticcheck // SA1019: we want to keep using v1alpha
-			ValidHost:       in.Host, //nolint:staticcheck // SA1019: we want to keep using v1alpha
+		out := &rpb.ServerReflectionResponse{
+			ValidHost:       in.Host,
 			OriginalRequest: in,
 		}
 		switch req := in.MessageRequest.(type) {
 		case *rpb.ServerReflectionRequest_FileByFilename:
-			b, err := s.fileDescEncodingByFilename(req.FileByFilename, sentFileDescriptors) //nolint:staticcheck // SA1019: we want to keep using v1alpha
+			b, err := s.fileDescEncodingByFilename(req.FileByFilename, sentFileDescriptors)
 			if err != nil {
 				out.MessageResponse = &rpb.ServerReflectionResponse_ErrorResponse{
-					ErrorResponse: &rpb.ErrorResponse{ //nolint:staticcheck // SA1019: we want to keep using v1alpha
+					ErrorResponse: &rpb.ErrorResponse{
 						ErrorCode:    int32(codes.NotFound),
 						ErrorMessage: err.Error(),
 					},
 				}
 			} else {
 				out.MessageResponse = &rpb.ServerReflectionResponse_FileDescriptorResponse{
-					FileDescriptorResponse: &rpb.FileDescriptorResponse{FileDescriptorProto: b}, //nolint:staticcheck // SA1019: we want to keep using v1alpha
+					FileDescriptorResponse: &rpb.FileDescriptorResponse{FileDescriptorProto: b},
 				}
 			}
 		case *rpb.ServerReflectionRequest_FileContainingSymbol:
-			b, err := s.fileDescEncodingContainingSymbol(req.FileContainingSymbol, sentFileDescriptors) //nolint:staticcheck // SA1019: we want to keep using v1alpha
+			b, err := s.fileDescEncodingContainingSymbol(req.FileContainingSymbol, sentFileDescriptors)
 			if err != nil {
 				out.MessageResponse = &rpb.ServerReflectionResponse_ErrorResponse{
-					ErrorResponse: &rpb.ErrorResponse{ //nolint:staticcheck // SA1019: we want to keep using v1alpha
+					ErrorResponse: &rpb.ErrorResponse{
 						ErrorCode:    int32(codes.NotFound),
 						ErrorMessage: err.Error(),
 					},
 				}
 			} else {
 				out.MessageResponse = &rpb.ServerReflectionResponse_FileDescriptorResponse{
-					FileDescriptorResponse: &rpb.FileDescriptorResponse{FileDescriptorProto: b}, //nolint:staticcheck // SA1019: we want to keep using v1alpha
+					FileDescriptorResponse: &rpb.FileDescriptorResponse{FileDescriptorProto: b},
 				}
 			}
 		case *rpb.ServerReflectionRequest_FileContainingExtension:
-			typeName := req.FileContainingExtension.ContainingType //nolint:staticcheck // SA1019: we want to keep using v1alpha
-			extNum := req.FileContainingExtension.ExtensionNumber  //nolint:staticcheck // SA1019: we want to keep using v1alpha
+			typeName := req.FileContainingExtension.ContainingType
+			extNum := req.FileContainingExtension.ExtensionNumber
 			b, err := s.fileDescEncodingContainingExtension(typeName, extNum, sentFileDescriptors)
 			if err != nil {
 				out.MessageResponse = &rpb.ServerReflectionResponse_ErrorResponse{
-					ErrorResponse: &rpb.ErrorResponse{ //nolint:staticcheck // SA1019: we want to keep using v1alpha
+					ErrorResponse: &rpb.ErrorResponse{
 						ErrorCode:    int32(codes.NotFound),
 						ErrorMessage: err.Error(),
 					},
 				}
 			} else {
 				out.MessageResponse = &rpb.ServerReflectionResponse_FileDescriptorResponse{
-					FileDescriptorResponse: &rpb.FileDescriptorResponse{FileDescriptorProto: b}, //nolint:staticcheck // SA1019: we want to keep using v1alpha
+					FileDescriptorResponse: &rpb.FileDescriptorResponse{FileDescriptorProto: b},
 				}
 			}
 		case *rpb.ServerReflectionRequest_AllExtensionNumbersOfType:
-			extNums, err := s.allExtensionNumbersForTypeName(req.AllExtensionNumbersOfType) //nolint:staticcheck // SA1019: we want to keep using v1alpha
+			extNums, err := s.allExtensionNumbersForTypeName(req.AllExtensionNumbersOfType)
 			if err != nil {
 				out.MessageResponse = &rpb.ServerReflectionResponse_ErrorResponse{
-					ErrorResponse: &rpb.ErrorResponse{ //nolint:staticcheck // SA1019: we want to keep using v1alpha
+					ErrorResponse: &rpb.ErrorResponse{
 						ErrorCode:    int32(codes.NotFound),
 						ErrorMessage: err.Error(),
 					},
@@ -448,22 +447,22 @@ func (s *serverReflectionServer) ServerReflectionInfo(stream rpb.ServerReflectio
 				log.Printf("OH NO: %s", err)
 			} else {
 				out.MessageResponse = &rpb.ServerReflectionResponse_AllExtensionNumbersResponse{
-					AllExtensionNumbersResponse: &rpb.ExtensionNumberResponse{ //nolint:staticcheck // SA1019: we want to keep using v1alpha
-						BaseTypeName:    req.AllExtensionNumbersOfType, //nolint:staticcheck // SA1019: we want to keep using v1alpha
+					AllExtensionNumbersResponse: &rpb.ExtensionNumberResponse{
+						BaseTypeName:    req.AllExtensionNumbersOfType,
 						ExtensionNumber: extNums,
 					},
 				}
 			}
 		case *rpb.ServerReflectionRequest_ListServices:
 			svcNames, _ := s.getSymbols()
-			serviceResponses := make([]*rpb.ServiceResponse, len(svcNames)) //nolint:staticcheck // SA1019: we want to keep using v1alpha
+			serviceResponses := make([]*rpb.ServiceResponse, len(svcNames))
 			for i, n := range svcNames {
-				serviceResponses[i] = &rpb.ServiceResponse{ //nolint:staticcheck // SA1019: we want to keep using v1alpha
+				serviceResponses[i] = &rpb.ServiceResponse{
 					Name: n,
 				}
 			}
 			out.MessageResponse = &rpb.ServerReflectionResponse_ListServicesResponse{
-				ListServicesResponse: &rpb.ListServiceResponse{ //nolint:staticcheck // SA1019: we want to keep using v1alpha
+				ListServicesResponse: &rpb.ListServiceResponse{
 					Service: serviceResponses,
 				},
 			}

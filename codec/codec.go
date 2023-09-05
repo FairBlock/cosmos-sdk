@@ -3,7 +3,6 @@ package codec
 import (
 	"github.com/cosmos/gogoproto/proto"
 	"google.golang.org/grpc/encoding"
-	protov2 "google.golang.org/protobuf/proto"
 
 	"github.com/cosmos/cosmos-sdk/codec/types"
 )
@@ -19,52 +18,32 @@ type (
 	Codec interface {
 		BinaryCodec
 		JSONCodec
-
-		// InterfaceRegistry returns the interface registry.
-		InterfaceRegistry() types.InterfaceRegistry
-
-		// GetMsgAnySigners returns the signers of the given message encoded in a protobuf Any
-		// as well as the decoded google.golang.org/protobuf/proto.Message that was used to
-		// extract the signers so that this can be used in other contexts.
-		GetMsgAnySigners(msg *types.Any) ([][]byte, protov2.Message, error)
-
-		// GetMsgV2Signers returns the signers of the given message.
-		GetMsgV2Signers(msg protov2.Message) ([][]byte, error)
-
-		// GetMsgV1Signers returns the signers of the given message plus the
-		// decoded google.golang.org/protobuf/proto.Message that was used to extract the
-		// signers so that this can be used in other contexts.
-		GetMsgV1Signers(msg proto.Message) ([][]byte, protov2.Message, error)
-
-		// mustEmbedCodec requires that all implementations of Codec embed an official implementation from the codec
-		// package. This allows new methods to be added to the Codec interface without breaking backwards compatibility.
-		mustEmbedCodec()
 	}
 
 	BinaryCodec interface {
 		// Marshal returns binary encoding of v.
-		Marshal(o proto.Message) ([]byte, error)
+		Marshal(o ProtoMarshaler) ([]byte, error)
 		// MustMarshal calls Marshal and panics if error is returned.
-		MustMarshal(o proto.Message) []byte
+		MustMarshal(o ProtoMarshaler) []byte
 
 		// MarshalLengthPrefixed returns binary encoding of v with bytes length prefix.
-		MarshalLengthPrefixed(o proto.Message) ([]byte, error)
+		MarshalLengthPrefixed(o ProtoMarshaler) ([]byte, error)
 		// MustMarshalLengthPrefixed calls MarshalLengthPrefixed and panics if
 		// error is returned.
-		MustMarshalLengthPrefixed(o proto.Message) []byte
+		MustMarshalLengthPrefixed(o ProtoMarshaler) []byte
 
 		// Unmarshal parses the data encoded with Marshal method and stores the result
 		// in the value pointed to by v.
-		Unmarshal(bz []byte, ptr proto.Message) error
+		Unmarshal(bz []byte, ptr ProtoMarshaler) error
 		// MustUnmarshal calls Unmarshal and panics if error is returned.
-		MustUnmarshal(bz []byte, ptr proto.Message)
+		MustUnmarshal(bz []byte, ptr ProtoMarshaler)
 
 		// Unmarshal parses the data encoded with UnmarshalLengthPrefixed method and stores
 		// the result in the value pointed to by v.
-		UnmarshalLengthPrefixed(bz []byte, ptr proto.Message) error
+		UnmarshalLengthPrefixed(bz []byte, ptr ProtoMarshaler) error
 		// MustUnmarshalLengthPrefixed calls UnmarshalLengthPrefixed and panics if error
 		// is returned.
-		MustUnmarshalLengthPrefixed(bz []byte, ptr proto.Message)
+		MustUnmarshalLengthPrefixed(bz []byte, ptr ProtoMarshaler)
 
 		// MarshalInterface is a helper method which will wrap `i` into `Any` for correct
 		// binary interface (de)serialization.
@@ -99,8 +78,6 @@ type (
 
 	// ProtoMarshaler defines an interface a type must implement to serialize itself
 	// as a protocol buffer defined message.
-	//
-	// Deprecated: Use proto.Message instead from github.com/cosmos/gogoproto/proto.
 	ProtoMarshaler interface {
 		proto.Message // for JSON serialization
 

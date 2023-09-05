@@ -3,13 +3,11 @@ package keeper
 import (
 	"context"
 
-	"cosmossdk.io/store/prefix"
-	"cosmossdk.io/x/nft"
-
-	"github.com/cosmos/cosmos-sdk/runtime"
+	"github.com/cosmos/cosmos-sdk/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/cosmos/cosmos-sdk/types/query"
+	"github.com/cosmos/cosmos-sdk/x/nft"
 )
 
 var _ nft.QueryServer = Keeper{}
@@ -24,7 +22,7 @@ func (k Keeper) Balance(goCtx context.Context, r *nft.QueryBalanceRequest) (*nft
 		return nil, nft.ErrEmptyClassID
 	}
 
-	owner, err := k.ac.StringToBytes(r.Owner)
+	owner, err := sdk.AccAddressFromBech32(r.Owner)
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +75,7 @@ func (k Keeper) NFTs(goCtx context.Context, r *nft.QueryNFTsRequest) (*nft.Query
 	var owner sdk.AccAddress
 
 	if len(r.Owner) > 0 {
-		owner, err = k.ac.StringToBytes(r.Owner)
+		owner, err = sdk.AccAddressFromBech32(r.Owner)
 		if err != nil {
 			return nil, err
 		}
@@ -89,7 +87,7 @@ func (k Keeper) NFTs(goCtx context.Context, r *nft.QueryNFTsRequest) (*nft.Query
 
 	switch {
 	case len(r.ClassId) > 0 && len(r.Owner) > 0:
-		if pageRes, err = query.Paginate(k.getClassStoreByOwner(ctx, owner, r.ClassId), r.Pagination, func(key, _ []byte) error {
+		if pageRes, err = query.Paginate(k.getClassStoreByOwner(ctx, owner, r.ClassId), r.Pagination, func(key []byte, _ []byte) error {
 			nft, has := k.GetNFT(ctx, r.ClassId, string(key))
 			if has {
 				nfts = append(nfts, &nft)
@@ -100,7 +98,7 @@ func (k Keeper) NFTs(goCtx context.Context, r *nft.QueryNFTsRequest) (*nft.Query
 		}
 	case len(r.ClassId) > 0 && len(r.Owner) == 0:
 		nftStore := k.getNFTStore(ctx, r.ClassId)
-		if pageRes, err = query.Paginate(nftStore, r.Pagination, func(_, value []byte) error {
+		if pageRes, err = query.Paginate(nftStore, r.Pagination, func(_ []byte, value []byte) error {
 			var nft nft.NFT
 			if err := k.cdc.Unmarshal(value, &nft); err != nil {
 				return err
@@ -111,7 +109,7 @@ func (k Keeper) NFTs(goCtx context.Context, r *nft.QueryNFTsRequest) (*nft.Query
 			return nil, err
 		}
 	case len(r.ClassId) == 0 && len(r.Owner) > 0:
-		if pageRes, err = query.Paginate(k.prefixStoreNftOfClassByOwner(ctx, owner), r.Pagination, func(key, value []byte) error {
+		if pageRes, err = query.Paginate(k.prefixStoreNftOfClassByOwner(ctx, owner), r.Pagination, func(key []byte, value []byte) error {
 			classID, nftID := parseNftOfClassByOwnerStoreKey(key)
 			if n, has := k.GetNFT(ctx, classID, nftID); has {
 				nfts = append(nfts, &n)
@@ -175,11 +173,11 @@ func (k Keeper) Classes(goCtx context.Context, r *nft.QueryClassesRequest) (*nft
 	}
 
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	store := k.storeService.OpenKVStore(ctx)
-	classStore := prefix.NewStore(runtime.KVStoreAdapter(store), ClassKey)
+	store := ctx.KVStore(k.storeKey)
+	classStore := prefix.NewStore(store, ClassKey)
 
 	var classes []*nft.Class
-	pageRes, err := query.Paginate(classStore, r.Pagination, func(_, value []byte) error {
+	pageRes, err := query.Paginate(classStore, r.Pagination, func(_ []byte, value []byte) error {
 		var class nft.Class
 		if err := k.cdc.Unmarshal(value, &class); err != nil {
 			return err

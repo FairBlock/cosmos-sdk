@@ -4,14 +4,11 @@ import (
 	"testing"
 	"time"
 
-	cmtproto "github.com/cometbft/cometbft/proto/tendermint/types"
+	"cosmossdk.io/math"
+	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 
-	"cosmossdk.io/math"
-	storetypes "cosmossdk.io/store/types"
-
-	"github.com/cosmos/cosmos-sdk/runtime"
 	"github.com/cosmos/cosmos-sdk/testutil"
 	simtestutil "github.com/cosmos/cosmos-sdk/testutil/sims"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -25,11 +22,10 @@ import (
 
 func TestSetWithdrawAddr(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	key := storetypes.NewKVStoreKey(types.StoreKey)
-	storeService := runtime.NewKVStoreService(key)
-	testCtx := testutil.DefaultContextWithDB(t, key, storetypes.NewTransientStoreKey("transient_test"))
+	key := sdk.NewKVStoreKey(types.StoreKey)
+	testCtx := testutil.DefaultContextWithDB(t, key, sdk.NewTransientStoreKey("transient_test"))
 	encCfg := moduletestutil.MakeTestEncodingConfig(distribution.AppModuleBasic{})
-	ctx := testCtx.Ctx.WithBlockHeader(cmtproto.Header{Time: time.Now()})
+	ctx := testCtx.Ctx.WithBlockHeader(tmproto.Header{Time: time.Now()})
 	addrs := simtestutil.CreateIncrementalAccounts(2)
 
 	delegatorAddr := addrs[0]
@@ -46,7 +42,7 @@ func TestSetWithdrawAddr(t *testing.T) {
 
 	distrKeeper := keeper.NewKeeper(
 		encCfg.Codec,
-		storeService,
+		key,
 		accountKeeper,
 		bankKeeper,
 		stakingKeeper,
@@ -56,30 +52,26 @@ func TestSetWithdrawAddr(t *testing.T) {
 
 	params := types.DefaultParams()
 	params.WithdrawAddrEnabled = false
-	require.NoError(t, distrKeeper.Params.Set(ctx, params))
+	require.NoError(t, distrKeeper.SetParams(ctx, params))
 
 	err := distrKeeper.SetWithdrawAddr(ctx, delegatorAddr, withdrawAddr)
 	require.NotNil(t, err)
 
 	params.WithdrawAddrEnabled = true
-	require.NoError(t, distrKeeper.Params.Set(ctx, params))
+	require.NoError(t, distrKeeper.SetParams(ctx, params))
 
 	err = distrKeeper.SetWithdrawAddr(ctx, delegatorAddr, withdrawAddr)
 	require.Nil(t, err)
-	addr, err := distrKeeper.GetDelegatorWithdrawAddr(ctx, delegatorAddr)
-	require.NoError(t, err)
-	require.Equal(t, addr, withdrawAddr)
 
 	require.Error(t, distrKeeper.SetWithdrawAddr(ctx, delegatorAddr, distrAcc.GetAddress()))
 }
 
 func TestWithdrawValidatorCommission(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	key := storetypes.NewKVStoreKey(types.StoreKey)
-	storeService := runtime.NewKVStoreService(key)
-	testCtx := testutil.DefaultContextWithDB(t, key, storetypes.NewTransientStoreKey("transient_test"))
+	key := sdk.NewKVStoreKey(types.StoreKey)
+	testCtx := testutil.DefaultContextWithDB(t, key, sdk.NewTransientStoreKey("transient_test"))
 	encCfg := moduletestutil.MakeTestEncodingConfig(distribution.AppModuleBasic{})
-	ctx := testCtx.Ctx.WithBlockHeader(cmtproto.Header{Time: time.Now()})
+	ctx := testCtx.Ctx.WithBlockHeader(tmproto.Header{Time: time.Now()})
 	addrs := simtestutil.CreateIncrementalAccounts(1)
 
 	valAddr := sdk.ValAddress(addrs[0])
@@ -97,7 +89,7 @@ func TestWithdrawValidatorCommission(t *testing.T) {
 
 	distrKeeper := keeper.NewKeeper(
 		encCfg.Codec,
-		storeService,
+		key,
 		accountKeeper,
 		bankKeeper,
 		stakingKeeper,
@@ -106,13 +98,13 @@ func TestWithdrawValidatorCommission(t *testing.T) {
 	)
 
 	// set outstanding rewards
-	require.NoError(t, distrKeeper.ValidatorOutstandingRewards.Set(ctx, valAddr, types.ValidatorOutstandingRewards{Rewards: valCommission}))
+	distrKeeper.SetValidatorOutstandingRewards(ctx, valAddr, types.ValidatorOutstandingRewards{Rewards: valCommission})
 
 	// set commission
-	require.NoError(t, distrKeeper.ValidatorsAccumulatedCommission.Set(ctx, valAddr, types.ValidatorAccumulatedCommission{Commission: valCommission}))
+	distrKeeper.SetValidatorAccumulatedCommission(ctx, valAddr, types.ValidatorAccumulatedCommission{Commission: valCommission})
 
 	// withdraw commission
-	coins := sdk.NewCoins(sdk.NewCoin("mytoken", math.NewInt(1)), sdk.NewCoin("stake", math.NewInt(1)))
+	coins := sdk.NewCoins(sdk.NewCoin("mytoken", sdk.NewInt(1)), sdk.NewCoin("stake", sdk.NewInt(1)))
 	// if SendCoinsFromModuleToAccount is called, we know that the withdraw was successful
 	bankKeeper.EXPECT().SendCoinsFromModuleToAccount(gomock.Any(), "distribution", addrs[0], coins).Return(nil)
 
@@ -120,22 +112,21 @@ func TestWithdrawValidatorCommission(t *testing.T) {
 	require.NoError(t, err)
 
 	// check remainder
-	remainderValCommission, err := distrKeeper.ValidatorsAccumulatedCommission.Get(ctx, valAddr)
-	require.NoError(t, err)
-	remainder := remainderValCommission.Commission
+	remainder := distrKeeper.GetValidatorAccumulatedCommission(ctx, valAddr).Commission
 	require.Equal(t, sdk.DecCoins{
 		sdk.NewDecCoinFromDec("mytoken", math.LegacyNewDec(1).Quo(math.LegacyNewDec(4))),
 		sdk.NewDecCoinFromDec("stake", math.LegacyNewDec(1).Quo(math.LegacyNewDec(2))),
 	}, remainder)
+
+	require.True(t, true)
 }
 
 func TestGetTotalRewards(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	key := storetypes.NewKVStoreKey(types.StoreKey)
-	storeService := runtime.NewKVStoreService(key)
-	testCtx := testutil.DefaultContextWithDB(t, key, storetypes.NewTransientStoreKey("transient_test"))
+	key := sdk.NewKVStoreKey(types.StoreKey)
+	testCtx := testutil.DefaultContextWithDB(t, key, sdk.NewTransientStoreKey("transient_test"))
 	encCfg := moduletestutil.MakeTestEncodingConfig(distribution.AppModuleBasic{})
-	ctx := testCtx.Ctx.WithBlockHeader(cmtproto.Header{Time: time.Now()})
+	ctx := testCtx.Ctx.WithBlockHeader(tmproto.Header{Time: time.Now()})
 	addrs := simtestutil.CreateIncrementalAccounts(2)
 
 	valAddr0 := sdk.ValAddress(addrs[0])
@@ -149,7 +140,7 @@ func TestGetTotalRewards(t *testing.T) {
 
 	distrKeeper := keeper.NewKeeper(
 		encCfg.Codec,
-		storeService,
+		key,
 		accountKeeper,
 		bankKeeper,
 		stakingKeeper,
@@ -162,8 +153,8 @@ func TestGetTotalRewards(t *testing.T) {
 		sdk.NewDecCoinFromDec("stake", math.LegacyNewDec(3).Quo(math.LegacyNewDec(2))),
 	}
 
-	require.NoError(t, distrKeeper.ValidatorOutstandingRewards.Set(ctx, valAddr0, types.ValidatorOutstandingRewards{Rewards: valCommission}))
-	require.NoError(t, distrKeeper.ValidatorOutstandingRewards.Set(ctx, valAddr1, types.ValidatorOutstandingRewards{Rewards: valCommission}))
+	distrKeeper.SetValidatorOutstandingRewards(ctx, valAddr0, types.ValidatorOutstandingRewards{Rewards: valCommission})
+	distrKeeper.SetValidatorOutstandingRewards(ctx, valAddr1, types.ValidatorOutstandingRewards{Rewards: valCommission})
 
 	expectedRewards := valCommission.MulDec(math.LegacyNewDec(2))
 	totalRewards := distrKeeper.GetTotalRewards(ctx)
@@ -173,11 +164,10 @@ func TestGetTotalRewards(t *testing.T) {
 
 func TestFundCommunityPool(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	key := storetypes.NewKVStoreKey(types.StoreKey)
-	storeService := runtime.NewKVStoreService(key)
-	testCtx := testutil.DefaultContextWithDB(t, key, storetypes.NewTransientStoreKey("transient_test"))
+	key := sdk.NewKVStoreKey(types.StoreKey)
+	testCtx := testutil.DefaultContextWithDB(t, key, sdk.NewTransientStoreKey("transient_test"))
 	encCfg := moduletestutil.MakeTestEncodingConfig(distribution.AppModuleBasic{})
-	ctx := testCtx.Ctx.WithBlockHeader(cmtproto.Header{Time: time.Now()})
+	ctx := testCtx.Ctx.WithBlockHeader(tmproto.Header{Time: time.Now()})
 	addrs := simtestutil.CreateIncrementalAccounts(1)
 
 	bankKeeper := distrtestutil.NewMockBankKeeper(ctrl)
@@ -188,7 +178,7 @@ func TestFundCommunityPool(t *testing.T) {
 
 	distrKeeper := keeper.NewKeeper(
 		encCfg.Codec,
-		storeService,
+		key,
 		accountKeeper,
 		bankKeeper,
 		stakingKeeper,
@@ -197,18 +187,15 @@ func TestFundCommunityPool(t *testing.T) {
 	)
 
 	// reset fee pool
-	require.NoError(t, distrKeeper.FeePool.Set(ctx, types.InitialFeePool()))
+	distrKeeper.SetFeePool(ctx, types.InitialFeePool())
 
-	initPool, err := distrKeeper.FeePool.Get(ctx)
-	require.NoError(t, err)
+	initPool := distrKeeper.GetFeePool(ctx)
 	require.Empty(t, initPool.CommunityPool)
 
 	amount := sdk.NewCoins(sdk.NewInt64Coin("stake", 100))
 	bankKeeper.EXPECT().SendCoinsFromAccountToModule(gomock.Any(), addrs[0], "distribution", amount).Return(nil)
-	err = distrKeeper.FundCommunityPool(ctx, amount, addrs[0])
-	require.NoError(t, err)
+	err := distrKeeper.FundCommunityPool(ctx, amount, addrs[0])
+	require.Nil(t, err)
 
-	feePool, err := distrKeeper.FeePool.Get(ctx)
-	require.NoError(t, err)
-	require.Equal(t, initPool.CommunityPool.Add(sdk.NewDecCoinsFromCoins(amount...)...), feePool.CommunityPool)
+	require.Equal(t, initPool.CommunityPool.Add(sdk.NewDecCoinsFromCoins(amount...)...), distrKeeper.GetFeePool(ctx).CommunityPool)
 }

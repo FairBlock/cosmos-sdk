@@ -1,5 +1,6 @@
 package testdata
 
+// DONTCOVER
 // nolint
 
 import (

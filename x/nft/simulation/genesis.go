@@ -3,10 +3,9 @@ package simulation
 import (
 	"math/rand"
 
-	"cosmossdk.io/x/nft"
-
 	"github.com/cosmos/cosmos-sdk/types/module"
 	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
+	"github.com/cosmos/cosmos-sdk/x/nft"
 )
 
 // genClasses returns a slice of nft class.
@@ -47,13 +46,13 @@ func genNFT(r *rand.Rand, classID string, accounts []simtypes.Account) []*nft.En
 func RandomizedGenState(simState *module.SimulationState) {
 	var classes []*nft.Class
 	simState.AppParams.GetOrGenerate(
-		"nft", &classes, simState.Rand,
+		simState.Cdc, "nft", &classes, simState.Rand,
 		func(r *rand.Rand) { classes = genClasses(r, simState.Accounts) },
 	)
 
 	var entries []*nft.Entry
 	simState.AppParams.GetOrGenerate(
-		"nft", &entries, simState.Rand,
+		simState.Cdc, "nft", &entries, simState.Rand,
 		func(r *rand.Rand) {
 			class := classes[r.Int63n(int64(len(classes)))]
 			entries = genNFT(r, class.Id, simState.Accounts)

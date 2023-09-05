@@ -22,8 +22,7 @@ A full setup of the evidence module may look something as follows:
 
 	// First, create the keeper
 	evidenceKeeper := evidence.NewKeeper(
-	  appCodec, runtime.NewKVStoreService(keys[evidencetypes.StoreKey]),
-	  &app.StakingKeeper, app.SlashingKeeper,
+	  appCodec, keys[evidence.StoreKey], &app.StakingKeeper, app.SlashingKeeper,
 	)
 
 	// Second, create the evidence Handler and register all desired routes.

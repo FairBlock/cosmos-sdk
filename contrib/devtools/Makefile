@@ -47,14 +47,21 @@ GITHUBDIR := $(GOPATH)$(FS)src$(FS)github.com
 BUF_VERSION ?= 0.11.0
 
 TOOLS_DESTDIR  ?= $(GOPATH)/bin
+STATIK         = $(TOOLS_DESTDIR)/statik
 RUNSIM         = $(TOOLS_DESTDIR)/runsim
 
 tools: tools-stamp
-tools-stamp: runsim
+tools-stamp: statik runsim
 	# Create dummy file to satisfy dependency and avoid
 	# rebuilding when this Makefile target is hit twice
 	# in a row.
 	touch $@
+
+# Install the runsim binary
+statik: $(STATIK)
+$(STATIK):
+	@echo "Installing statik..."
+	@go install github.com/rakyll/statik@v0.1.6
 
 # Install the runsim binary
 runsim: $(RUNSIM)
@@ -63,7 +70,7 @@ $(RUNSIM):
 	@go install github.com/cosmos/tools/cmd/runsim@v1.0.0
 
 tools-clean:
-	rm -f $(GOLANGCI_LINT) $(RUNSIM)
+	rm -f $(STATIK) $(GOLANGCI_LINT) $(RUNSIM)
 	rm -f tools-stamp
 
-.PHONY: tools-clean runsim
+.PHONY: tools-clean statik runsim

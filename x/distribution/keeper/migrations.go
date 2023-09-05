@@ -5,7 +5,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/distribution/exported"
 	v2 "github.com/cosmos/cosmos-sdk/x/distribution/migrations/v2"
 	v3 "github.com/cosmos/cosmos-sdk/x/distribution/migrations/v3"
-	v4 "github.com/cosmos/cosmos-sdk/x/distribution/migrations/v4"
 )
 
 // Migrator is a struct for handling in-place store migrations.
@@ -21,7 +20,7 @@ func NewMigrator(keeper Keeper, legacySubspace exported.Subspace) Migrator {
 
 // Migrate1to2 migrates from version 1 to 2.
 func (m Migrator) Migrate1to2(ctx sdk.Context) error {
-	return v2.MigrateStore(ctx, m.keeper.storeService)
+	return v2.MigrateStore(ctx, m.keeper.storeKey)
 }
 
 // Migrate2to3 migrates the x/distribution module state from the consensus
@@ -29,9 +28,5 @@ func (m Migrator) Migrate1to2(ctx sdk.Context) error {
 // and managed by the x/params module and stores them directly into the x/distribution
 // module state.
 func (m Migrator) Migrate2to3(ctx sdk.Context) error {
-	return v3.MigrateStore(ctx, m.keeper.storeService, m.legacySubspace, m.keeper.cdc)
-}
-
-func (m Migrator) Migrate3to4(ctx sdk.Context) error {
-	return v4.MigrateStore(ctx, m.keeper.storeService, m.keeper.cdc)
+	return v3.MigrateStore(ctx, m.keeper.storeKey, m.legacySubspace, m.keeper.cdc)
 }

@@ -2,17 +2,19 @@ package types_test
 
 import (
 	"encoding/hex"
+	"fmt"
 	"strings"
 	"testing"
-	"time"
 
 	abci "github.com/cometbft/cometbft/abci/types"
-	cmtt "github.com/cometbft/cometbft/proto/tendermint/types"
+	"github.com/cometbft/cometbft/libs/bytes"
 	coretypes "github.com/cometbft/cometbft/rpc/core/types"
-	cmt "github.com/cometbft/cometbft/types"
+	"github.com/golang/protobuf/proto"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/cosmos/cosmos-sdk/codec"
+	"github.com/cosmos/cosmos-sdk/testutil/testdata"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
@@ -66,7 +68,7 @@ func (s *resultTestSuite) TestNewSearchTxsResult() {
 }
 
 func (s *resultTestSuite) TestResponseResultTx() {
-	deliverTxResult := abci.ExecTxResult{
+	deliverTxResult := abci.ResponseDeliverTx{
 		Codespace: "codespace",
 		Code:      1,
 		Data:      []byte("data"),
@@ -76,7 +78,7 @@ func (s *resultTestSuite) TestResponseResultTx() {
 		GasUsed:   90,
 	}
 	resultTx := &coretypes.ResultTx{
-		Hash:     []byte("test"),
+		Hash:     bytes.HexBytes([]byte("test")),
 		Height:   10,
 		TxResult: deliverTxResult,
 	}
@@ -123,7 +125,7 @@ txhash: "74657374"
 		Codespace: "codespace",
 		Data:      []byte("data"),
 		Log:       `[]`,
-		Hash:      []byte("test"),
+		Hash:      bytes.HexBytes([]byte("test")),
 	}
 
 	s.Require().Equal(&sdk.TxResponse{
@@ -137,40 +139,32 @@ txhash: "74657374"
 	s.Require().Equal((*sdk.TxResponse)(nil), sdk.NewResponseFormatBroadcastTx(nil))
 }
 
-func (s *resultTestSuite) TestNewSearchBlocksResult() {
-	got := sdk.NewSearchBlocksResult(150, 20, 2, 20, []*cmtt.Block{})
-	s.Require().Equal(&sdk.SearchBlocksResult{
-		TotalCount: 150,
-		Count:      20,
-		PageNumber: 2,
-		PageTotal:  8,
-		Limit:      20,
-		Blocks:     []*cmtt.Block{},
-	}, got)
-}
+func TestWrapServiceResult(t *testing.T) {
+	ctx := sdk.Context{}
 
-func (s *resultTestSuite) TestResponseResultBlock() {
-	timestamp := time.Now()
-	timestampStr := timestamp.UTC().Format(time.RFC3339)
+	res, err := sdk.WrapServiceResult(ctx, nil, fmt.Errorf("test"))
+	require.Nil(t, res)
+	require.NotNil(t, err)
 
-	//  create a block
-	resultBlock := &coretypes.ResultBlock{Block: &cmt.Block{
-		Header: cmt.Header{
-			Height: 10,
-			Time:   timestamp,
-		},
-		Evidence: cmt.EvidenceData{
-			Evidence: make(cmt.EvidenceList, 0),
-		},
-	}}
+	res, err = sdk.WrapServiceResult(ctx, &testdata.Dog{}, nil)
+	require.NotNil(t, res)
+	require.Nil(t, err)
+	require.Empty(t, res.Events)
 
-	blk, err := resultBlock.Block.ToProto()
-	s.Require().NoError(err)
+	ctx = ctx.WithEventManager(sdk.NewEventManager())
+	ctx.EventManager().EmitEvent(sdk.NewEvent("test"))
+	res, err = sdk.WrapServiceResult(ctx, &testdata.Dog{}, nil)
+	require.NotNil(t, res)
+	require.Nil(t, err)
+	require.Len(t, res.Events, 1)
 
-	want := &cmtt.Block{
-		Header:   blk.Header,
-		Evidence: blk.Evidence,
-	}
-
-	s.Require().Equal(want, sdk.NewResponseResultBlock(resultBlock, timestampStr))
+	spot := testdata.Dog{Name: "spot"}
+	res, err = sdk.WrapServiceResult(ctx, &spot, nil)
+	require.NotNil(t, res)
+	require.Nil(t, err)
+	require.Len(t, res.Events, 1)
+	var spot2 testdata.Dog
+	err = proto.Unmarshal(res.Data, &spot2)
+	require.NoError(t, err)
+	require.Equal(t, spot, spot2)
 }

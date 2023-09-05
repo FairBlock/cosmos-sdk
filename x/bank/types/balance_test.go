@@ -1,11 +1,11 @@
 package types_test
 
 import (
+	"bytes"
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
 	"cosmossdk.io/math"
+	"github.com/stretchr/testify/require"
 
 	"github.com/cosmos/cosmos-sdk/crypto/keys/ed25519"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -60,7 +60,7 @@ func TestBalanceValidate(t *testing.T) {
 			bank.Balance{
 				Address: "cosmos1yq8lgssgxlx9smjhes6ryjasmqmd3ts2559g0t",
 				Coins: sdk.Coins{
-					sdk.Coin{Denom: "uatom", Amount: math.NewInt(-1)},
+					sdk.Coin{Denom: "uatom", Amount: sdk.NewInt(-1)},
 				},
 			},
 			true,
@@ -118,9 +118,9 @@ func TestBalanceValidate(t *testing.T) {
 
 func TestBalance_GetAddress(t *testing.T) {
 	tests := []struct {
-		name    string
-		Address string
-		err     bool
+		name      string
+		Address   string
+		wantPanic bool
 	}{
 		{"empty address", "", true},
 		{"malformed address", "invalid", true},
@@ -130,10 +130,10 @@ func TestBalance_GetAddress(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			b := bank.Balance{Address: tt.Address}
-			if !tt.err {
-				require.Equal(t, b.GetAddress(), tt.Address)
+			if tt.wantPanic {
+				require.Panics(t, func() { b.GetAddress() })
 			} else {
-				require.False(t, len(b.GetAddress()) != 0 && b.GetAddress() != tt.Address)
+				require.False(t, b.GetAddress().Empty())
 			}
 		})
 	}
@@ -164,7 +164,8 @@ func TestSanitizeBalances(t *testing.T) {
 		// Ensure that every single value that comes after i is less than it.
 		for j := i + 1; j < len(sorted); j++ {
 			aj := sorted[j]
-			if ai.GetAddress() == aj.GetAddress() {
+
+			if got := bytes.Compare(ai.GetAddress(), aj.GetAddress()); got > 0 {
 				t.Errorf("Balance(%d) > Balance(%d)", i, j)
 			}
 		}
@@ -191,7 +192,6 @@ func BenchmarkSanitizeBalances1000(b *testing.B) {
 }
 
 func benchmarkSanitizeBalances(b *testing.B, nAddresses int) {
-	b.Helper()
 	b.ReportAllocs()
 	tokens := sdk.TokensFromConsensusPower(81, sdk.DefaultPowerReduction)
 	coin := sdk.NewCoin("benchcoin", tokens)

@@ -3,13 +3,11 @@ package orm
 import (
 	"fmt"
 
-	dbm "github.com/cosmos/cosmos-db"
-
-	"cosmossdk.io/log"
-	"cosmossdk.io/store"
-	"cosmossdk.io/store/gaskv"
-	"cosmossdk.io/store/metrics"
-	storetypes "cosmossdk.io/store/types"
+	dbm "github.com/cometbft/cometbft-db"
+	"github.com/cosmos/cosmos-sdk/store"
+	"github.com/cosmos/cosmos-sdk/store/gaskv"
+	storetypes "github.com/cosmos/cosmos-sdk/store/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 type MockContext struct {
@@ -21,11 +19,11 @@ func NewMockContext() *MockContext {
 	db := dbm.NewMemDB()
 	return &MockContext{
 		db:    dbm.NewMemDB(),
-		store: store.NewCommitMultiStore(db, log.NewNopLogger(), metrics.NewNoOpMetrics()),
+		store: store.NewCommitMultiStore(db),
 	}
 }
 
-func (m MockContext) KVStore(key storetypes.StoreKey) storetypes.KVStore {
+func (m MockContext) KVStore(key storetypes.StoreKey) sdk.KVStore {
 	if s := m.store.GetCommitKVStore(key); s != nil {
 		return s
 	}
@@ -78,16 +76,16 @@ func (d debuggingGasMeter) String() string {
 }
 
 type GasCountingMockContext struct {
-	GasMeter storetypes.GasMeter
+	GasMeter sdk.GasMeter
 }
 
 func NewGasCountingMockContext() *GasCountingMockContext {
 	return &GasCountingMockContext{
-		GasMeter: &debuggingGasMeter{storetypes.NewInfiniteGasMeter()},
+		GasMeter: &debuggingGasMeter{sdk.NewInfiniteGasMeter()},
 	}
 }
 
-func (g GasCountingMockContext) KVStore(store storetypes.KVStore) storetypes.KVStore {
+func (g GasCountingMockContext) KVStore(store sdk.KVStore) sdk.KVStore {
 	return gaskv.NewStore(store, g.GasMeter, storetypes.KVGasConfig())
 }
 
@@ -100,5 +98,5 @@ func (g GasCountingMockContext) GasRemaining() storetypes.Gas {
 }
 
 func (g *GasCountingMockContext) ResetGasMeter() {
-	g.GasMeter = storetypes.NewInfiniteGasMeter()
+	g.GasMeter = sdk.NewInfiniteGasMeter()
 }

@@ -3,11 +3,6 @@ package tx
 import (
 	"fmt"
 
-	protov2 "google.golang.org/protobuf/proto"
-
-	errorsmod "cosmossdk.io/errors"
-
-	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -20,6 +15,7 @@ const MaxGasWanted = uint64((1 << 63) - 1)
 // Interface implementation checks.
 var (
 	_, _, _, _ codectypes.UnpackInterfacesMessage = &Tx{}, &TxBody{}, &AuthInfo{}, &SignerInfo{}
+	_          sdk.Tx                             = &Tx{}
 )
 
 // GetMsgs implements the GetMsgs method on sdk.Tx.
@@ -58,21 +54,21 @@ func (t *Tx) ValidateBasic() error {
 	}
 
 	if fee.GasLimit > MaxGasWanted {
-		return errorsmod.Wrapf(
+		return sdkerrors.Wrapf(
 			sdkerrors.ErrInvalidRequest,
 			"invalid gas supplied; %d > %d", fee.GasLimit, MaxGasWanted,
 		)
 	}
 
 	if fee.Amount.IsAnyNil() {
-		return errorsmod.Wrapf(
+		return sdkerrors.Wrapf(
 			sdkerrors.ErrInsufficientFee,
 			"invalid fee provided: null",
 		)
 	}
 
 	if fee.Amount.IsAnyNegative() {
-		return errorsmod.Wrapf(
+		return sdkerrors.Wrapf(
 			sdkerrors.ErrInsufficientFee,
 			"invalid fee provided: %s", fee.Amount,
 		)
@@ -81,7 +77,7 @@ func (t *Tx) ValidateBasic() error {
 	if fee.Payer != "" {
 		_, err := sdk.AccAddressFromBech32(fee.Payer)
 		if err != nil {
-			return errorsmod.Wrapf(sdkerrors.ErrInvalidAddress, "Invalid fee payer address (%s)", err)
+			return sdkerrors.Wrapf(sdkerrors.ErrInvalidAddress, "Invalid fee payer address (%s)", err)
 		}
 	}
 
@@ -91,49 +87,41 @@ func (t *Tx) ValidateBasic() error {
 		return sdkerrors.ErrNoSignatures
 	}
 
+	if len(sigs) != len(t.GetSigners()) {
+		return sdkerrors.Wrapf(
+			sdkerrors.ErrUnauthorized,
+			"wrong number of signers; expected %d, got %d", len(t.GetSigners()), len(sigs),
+		)
+	}
+
 	return nil
 }
 
 // GetSigners retrieves all the signers of a tx.
 // This includes all unique signers of the messages (in order),
 // as well as the FeePayer (if specified and not already included).
-func (t *Tx) GetSigners(cdc codec.Codec) ([][]byte, []protov2.Message, error) {
-	var signers [][]byte
+func (t *Tx) GetSigners() []sdk.AccAddress {
+	var signers []sdk.AccAddress
 	seen := map[string]bool{}
 
-	var msgsv2 []protov2.Message
-	for _, msg := range t.Body.Messages {
-		xs, msgv2, err := cdc.GetMsgAnySigners(msg)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		msgsv2 = append(msgsv2, msgv2)
-
-		for _, signer := range xs {
-			if !seen[string(signer)] {
-				signers = append(signers, signer)
-				seen[string(signer)] = true
+	for _, msg := range t.GetMsgs() {
+		for _, addr := range msg.GetSigners() {
+			if !seen[addr.String()] {
+				signers = append(signers, addr)
+				seen[addr.String()] = true
 			}
 		}
 	}
 
 	// ensure any specified fee payer is included in the required signers (at the end)
 	feePayer := t.AuthInfo.Fee.Payer
-	var feePayerAddr []byte
-	if feePayer != "" {
-		var err error
-		feePayerAddr, err = cdc.InterfaceRegistry().SigningContext().AddressCodec().StringToBytes(feePayer)
-		if err != nil {
-			return nil, nil, err
-		}
-	}
-	if feePayerAddr != nil && !seen[string(feePayerAddr)] {
-		signers = append(signers, feePayerAddr)
-		seen[string(feePayerAddr)] = true
+	if feePayer != "" && !seen[feePayer] {
+		payerAddr := sdk.MustAccAddressFromBech32(feePayer)
+		signers = append(signers, payerAddr)
+		seen[feePayer] = true
 	}
 
-	return signers, msgsv2, nil
+	return signers
 }
 
 func (t *Tx) GetGas() uint64 {
@@ -144,33 +132,19 @@ func (t *Tx) GetFee() sdk.Coins {
 	return t.AuthInfo.Fee.Amount
 }
 
-func (t *Tx) FeePayer(cdc codec.Codec) []byte {
+func (t *Tx) FeePayer() sdk.AccAddress {
 	feePayer := t.AuthInfo.Fee.Payer
 	if feePayer != "" {
-		feePayerAddr, err := cdc.InterfaceRegistry().SigningContext().AddressCodec().StringToBytes(feePayer)
-		if err != nil {
-			panic(err)
-		}
-		return feePayerAddr
+		return sdk.MustAccAddressFromBech32(feePayer)
 	}
 	// use first signer as default if no payer specified
-	signers, _, err := t.GetSigners(cdc)
-	if err != nil {
-		panic(err)
-	}
-
-	return signers[0]
+	return t.GetSigners()[0]
 }
 
-func (t *Tx) FeeGranter(cdc codec.Codec) []byte {
-	feeGranter := t.AuthInfo.Fee.Granter
-	if feeGranter != "" {
-		feeGranterAddr, err := cdc.InterfaceRegistry().SigningContext().AddressCodec().StringToBytes(feeGranter)
-		if err != nil {
-			panic(err)
-		}
-
-		return feeGranterAddr
+func (t *Tx) FeeGranter() sdk.AccAddress {
+	feePayer := t.AuthInfo.Fee.Granter
+	if feePayer != "" {
+		return sdk.MustAccAddressFromBech32(feePayer)
 	}
 	return nil
 }
@@ -229,8 +203,8 @@ func (m *SignerInfo) UnpackInterfaces(unpacker codectypes.AnyUnpacker) error {
 func RegisterInterfaces(registry codectypes.InterfaceRegistry) {
 	registry.RegisterInterface(msgResponseInterfaceProtoName, (*MsgResponse)(nil))
 
-	registry.RegisterInterface("cosmos.tx.v1beta1.Tx", (*sdk.HasMsgs)(nil))
-	registry.RegisterImplementations((*sdk.HasMsgs)(nil), &Tx{})
+	registry.RegisterInterface("cosmos.tx.v1beta1.Tx", (*sdk.Tx)(nil))
+	registry.RegisterImplementations((*sdk.Tx)(nil), &Tx{})
 
 	registry.RegisterInterface("cosmos.tx.v1beta1.TxExtensionOptionI", (*TxExtensionOptionI)(nil))
 }

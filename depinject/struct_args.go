@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/cockroachdb/errors"
+	"github.com/pkg/errors"
 )
 
 // In can be embedded in another struct to inform the container that the

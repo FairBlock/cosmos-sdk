@@ -1,23 +1,29 @@
 package main
 
 import (
-	"github.com/spf13/cobra"
-
 	"cosmossdk.io/tools/cosmovisor"
+	"github.com/rs/zerolog"
+	"github.com/spf13/cobra"
 )
+
+func init() {
+	rootCmd.AddCommand(runCmd)
+}
 
 var runCmd = &cobra.Command{
 	Use:                "run",
 	Short:              "Run an APP command.",
 	SilenceUsage:       true,
 	DisableFlagParsing: true,
-	RunE: func(_ *cobra.Command, args []string) error {
-		return run(args)
+	RunE: func(cmd *cobra.Command, args []string) error {
+		logger := cmd.Context().Value(cosmovisor.LoggerKey).(*zerolog.Logger)
+
+		return Run(logger, args)
 	},
 }
 
-// run runs the configured program with the given args and monitors it for upgrades.
-func run(args []string, options ...RunOption) error {
+// Run runs the configured program with the given args and monitors it for upgrades.
+func Run(logger *zerolog.Logger, args []string, options ...RunOption) error {
 	cfg, err := cosmovisor.GetConfigFromEnv()
 	if err != nil {
 		return err
@@ -28,7 +34,6 @@ func run(args []string, options ...RunOption) error {
 		opt(&runCfg)
 	}
 
-	logger := cfg.Logger(runCfg.StdOut)
 	launcher, err := cosmovisor.NewLauncher(logger, cfg)
 	if err != nil {
 		return err
@@ -37,12 +42,12 @@ func run(args []string, options ...RunOption) error {
 	doUpgrade, err := launcher.Run(args, runCfg.StdOut, runCfg.StdErr)
 	// if RestartAfterUpgrade, we launch after a successful upgrade (given that condition launcher.Run returns nil)
 	for cfg.RestartAfterUpgrade && err == nil && doUpgrade {
-		logger.Info("upgrade detected, relaunching", "app", cfg.Name)
+		logger.Info().Str("app", cfg.Name).Msg("upgrade detected, relaunching")
 		doUpgrade, err = launcher.Run(args, runCfg.StdOut, runCfg.StdErr)
 	}
 
 	if doUpgrade && err == nil {
-		logger.Info("upgrade detected, DAEMON_RESTART_AFTER_UPGRADE is off. Verify new upgrade and start cosmovisor again.")
+		logger.Info().Msg("upgrade detected, DAEMON_RESTART_AFTER_UPGRADE is off. Verify new upgrade and start cosmovisor again.")
 	}
 
 	return err

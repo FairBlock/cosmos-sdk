@@ -1,12 +1,9 @@
-package testutil
+package tx
 
 import (
 	"bytes"
-	"context"
 
 	"github.com/stretchr/testify/suite"
-
-	signingv1beta1 "cosmossdk.io/api/cosmos/tx/signing/v1beta1"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	kmultisig "github.com/cosmos/cosmos-sdk/crypto/keys/multisig"
@@ -75,10 +72,8 @@ func (s *TxConfigTestSuite) TestTxBuilderSetMsgs() {
 	s.Require().NoError(err)
 	tx := txBuilder.GetTx()
 	s.Require().Equal(msgs, tx.GetMsgs())
-	signers, err := tx.GetSigners()
-	s.Require().NoError(err)
-	s.Require().Equal([][]byte{addr1, addr2}, signers)
-	s.Require().Equal([]byte(addr1), tx.FeePayer())
+	s.Require().Equal([]sdk.AccAddress{addr1, addr2}, tx.GetSigners())
+	s.Require().Equal(addr1, tx.FeePayer())
 	s.Require().Error(tx.ValidateBasic()) // should fail because of no signatures
 }
 
@@ -101,19 +96,17 @@ func (s *TxConfigTestSuite) TestTxBuilderSetSignatures() {
 	s.Require().Error(txBuilder.GetTx().ValidateBasic())
 
 	signModeHandler := s.TxConfig.SignModeHandler()
-	s.Require().Contains(signModeHandler.SupportedModes(), signingv1beta1.SignMode_SIGN_MODE_DIRECT)
-	defaultSignMode, err := signing.APISignModeToInternal(s.TxConfig.SignModeHandler().DefaultMode())
-	s.Require().NoError(err)
+	s.Require().Contains(signModeHandler.Modes(), signModeHandler.DefaultMode())
 
 	// set SignatureV2 without actual signature bytes
 	seq1 := uint64(2) // Arbitrary account sequence
-	sigData1 := &signingtypes.SingleSignatureData{SignMode: defaultSignMode}
+	sigData1 := &signingtypes.SingleSignatureData{SignMode: signModeHandler.DefaultMode()}
 	sig1 := signingtypes.SignatureV2{PubKey: pubkey, Data: sigData1, Sequence: seq1}
 
 	mseq := uint64(4) // Arbitrary account sequence
 	msigData := multisig.NewMultisig(2)
-	multisig.AddSignature(msigData, &signingtypes.SingleSignatureData{SignMode: defaultSignMode}, 0)
-	multisig.AddSignature(msigData, &signingtypes.SingleSignatureData{SignMode: defaultSignMode}, 1)
+	multisig.AddSignature(msigData, &signingtypes.SingleSignatureData{SignMode: signModeHandler.DefaultMode()}, 0)
+	multisig.AddSignature(msigData, &signingtypes.SingleSignatureData{SignMode: signModeHandler.DefaultMode()}, 1)
 	msig := signingtypes.SignatureV2{PubKey: multisigPk, Data: msigData, Sequence: mseq}
 
 	// fail validation without required signers
@@ -130,9 +123,7 @@ func (s *TxConfigTestSuite) TestTxBuilderSetSignatures() {
 	s.Require().Len(sigsV2, 2)
 	s.Require().True(sigEquals(sig1, sigsV2[0]))
 	s.Require().True(sigEquals(msig, sigsV2[1]))
-	signers, err := sigTx.GetSigners()
-	s.Require().NoError(err)
-	s.Require().Equal([][]byte{addr, msigAddr}, signers)
+	s.Require().Equal([]sdk.AccAddress{addr, msigAddr}, sigTx.GetSigners())
 	s.Require().NoError(sigTx.ValidateBasic())
 
 	// sign transaction
@@ -143,8 +134,7 @@ func (s *TxConfigTestSuite) TestTxBuilderSetSignatures() {
 		Sequence:      seq1,
 		PubKey:        pubkey,
 	}
-	signBytes, err := signing.GetSignBytesAdapter(context.Background(),
-		s.TxConfig.SignModeHandler(), defaultSignMode, signerData, sigTx)
+	signBytes, err := signModeHandler.GetSignBytes(signModeHandler.DefaultMode(), signerData, sigTx)
 	s.Require().NoError(err)
 	sigBz, err := privKey.Sign(signBytes)
 	s.Require().NoError(err)
@@ -156,8 +146,7 @@ func (s *TxConfigTestSuite) TestTxBuilderSetSignatures() {
 		Sequence:      mseq,
 		PubKey:        multisigPk,
 	}
-	mSignBytes, err := signing.GetSignBytesAdapter(context.Background(),
-		s.TxConfig.SignModeHandler(), defaultSignMode, signerData, sigTx)
+	mSignBytes, err := signModeHandler.GetSignBytes(signModeHandler.DefaultMode(), signerData, sigTx)
 	s.Require().NoError(err)
 	mSigBz1, err := privKey.Sign(mSignBytes)
 	s.Require().NoError(err)
@@ -165,10 +154,10 @@ func (s *TxConfigTestSuite) TestTxBuilderSetSignatures() {
 	s.Require().NoError(err)
 	msigData = multisig.NewMultisig(2)
 	multisig.AddSignature(msigData, &signingtypes.SingleSignatureData{
-		SignMode: defaultSignMode, Signature: mSigBz1,
+		SignMode: signModeHandler.DefaultMode(), Signature: mSigBz1,
 	}, 0)
 	multisig.AddSignature(msigData, &signingtypes.SingleSignatureData{
-		SignMode: defaultSignMode, Signature: mSigBz2,
+		SignMode: signModeHandler.DefaultMode(), Signature: mSigBz2,
 	}, 0)
 
 	// set signature
@@ -183,9 +172,7 @@ func (s *TxConfigTestSuite) TestTxBuilderSetSignatures() {
 	s.Require().Len(sigsV2, 2)
 	s.Require().True(sigEquals(sig1, sigsV2[0]))
 	s.Require().True(sigEquals(msig, sigsV2[1]))
-	signers, err = sigTx.GetSigners()
-	s.Require().NoError(err)
-	s.Require().Equal([][]byte{addr, msigAddr}, signers)
+	s.Require().Equal([]sdk.AccAddress{addr, msigAddr}, sigTx.GetSigners())
 	s.Require().NoError(sigTx.ValidateBasic())
 }
 

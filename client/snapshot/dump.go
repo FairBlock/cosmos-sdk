@@ -9,9 +9,8 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/spf13/cobra"
-
 	"github.com/cosmos/cosmos-sdk/server"
+	"github.com/spf13/cobra"
 )
 
 // DumpArchiveCmd returns a command to dump the snapshot as portable archive format

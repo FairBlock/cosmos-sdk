@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/cockroachdb/errors"
+	"github.com/pkg/errors"
 
 	"cosmossdk.io/depinject/internal/graphviz"
 )

@@ -4,8 +4,6 @@ import (
 	"math/rand"
 	"time"
 
-	sdkmath "cosmossdk.io/math"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/address"
 	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
@@ -17,7 +15,7 @@ import (
 const (
 	DefaultWeightMsgUpdateParams int = 100
 
-	OpWeightMsgUpdateParams = "op_weight_msg_update_params"
+	OpWeightMsgUpdateParams = "op_weight_msg_update_params" //nolint:gosec
 )
 
 // ProposalMsgs defines the module weighted proposals' contents
@@ -42,7 +40,7 @@ func SimulateMsgUpdateParams(r *rand.Rand, _ sdk.Context, _ []simtypes.Account) 
 	params.MaxEntries = uint32(simtypes.RandIntBetween(r, 1, 1000))
 	params.MaxValidators = uint32(simtypes.RandIntBetween(r, 1, 1000))
 	params.UnbondingTime = time.Duration(simtypes.RandTimestamp(r).UnixNano())
-	params.MinCommissionRate = simtypes.RandomDecAmount(r, sdkmath.LegacyNewDec(1))
+	params.MinCommissionRate = simtypes.RandomDecAmount(r, sdk.NewDec(1))
 
 	return &types.MsgUpdateParams{
 		Authority: authority.String(),

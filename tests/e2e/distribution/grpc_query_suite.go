@@ -3,10 +3,9 @@ package distribution
 import (
 	"fmt"
 
+	"cosmossdk.io/simapp"
 	"github.com/cosmos/gogoproto/proto"
 	"github.com/stretchr/testify/suite"
-
-	"cosmossdk.io/simapp"
 
 	sdktestutil "github.com/cosmos/cosmos-sdk/testutil"
 	"github.com/cosmos/cosmos-sdk/testutil/network"
@@ -312,7 +311,7 @@ func (s *GRPCQueryTestSuite) TestQueryDelegatorRewardsGRPC() {
 			&types.QueryDelegationTotalRewardsResponse{},
 			&types.QueryDelegationTotalRewardsResponse{
 				Rewards: []types.DelegationDelegatorReward{
-					types.NewDelegationDelegatorReward(val.ValAddress.String(), rewards),
+					types.NewDelegationDelegatorReward(val.ValAddress, rewards),
 				},
 				Total: rewards,
 			},

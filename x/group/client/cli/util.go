@@ -31,9 +31,7 @@ func parseDecisionPolicy(cdc codec.Codec, decisionPolicyFile string) (group.Deci
 
 // parseMembers reads and parses the members.
 func parseMembers(membersFile string) ([]group.MemberRequest, error) {
-	members := struct {
-		Members []group.MemberRequest `json:"members"`
-	}{}
+	members := group.MemberRequests{}
 
 	if membersFile == "" {
 		return members.Members, nil
@@ -44,7 +42,8 @@ func parseMembers(membersFile string) ([]group.MemberRequest, error) {
 		return nil, err
 	}
 
-	if err := json.Unmarshal(contents, &members); err != nil {
+	err = json.Unmarshal(contents, &members)
+	if err != nil {
 		return nil, err
 	}
 

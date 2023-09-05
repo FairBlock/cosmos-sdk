@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/cosmos/cosmos-sdk/codec"
+	"github.com/cosmos/cosmos-sdk/codec/types"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/ed25519"
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
@@ -13,8 +14,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/module/testutil"
 )
 
-func NewTestInterfaceRegistry() codectypes.InterfaceRegistry {
-	registry := codectypes.NewInterfaceRegistry()
+func NewTestInterfaceRegistry() types.InterfaceRegistry {
+	registry := types.NewInterfaceRegistry()
 	registry.RegisterInterface("Animal", (*testdata.Animal)(nil))
 	registry.RegisterImplementations(
 		(*testdata.Animal)(nil),
@@ -25,10 +26,10 @@ func NewTestInterfaceRegistry() codectypes.InterfaceRegistry {
 }
 
 func TestMarshalAny(t *testing.T) {
-	catRegistry := codectypes.NewInterfaceRegistry()
+	catRegistry := types.NewInterfaceRegistry()
 	catRegistry.RegisterImplementations((*testdata.Animal)(nil), &testdata.Cat{})
 
-	registry := codectypes.NewInterfaceRegistry()
+	registry := types.NewInterfaceRegistry()
 
 	cdc := codec.NewProtoCodec(registry)
 
@@ -64,7 +65,7 @@ func TestMarshalAny(t *testing.T) {
 	require.Equal(t, kitty, animal)
 
 	// nil should fail
-	_ = NewTestInterfaceRegistry()
+	registry = NewTestInterfaceRegistry()
 	err = cdc.UnmarshalInterface(catBz, nil)
 	require.Error(t, err)
 }

@@ -6,27 +6,31 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"time"
 
+	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 
-	"cosmossdk.io/log"
 	"cosmossdk.io/tools/cosmovisor"
-	"cosmossdk.io/x/upgrade/plan"
+	cverrors "cosmossdk.io/tools/cosmovisor/errors"
 )
 
+func init() {
+	rootCmd.AddCommand(initCmd)
+}
+
 var initCmd = &cobra.Command{
-	Use:          "init <path to executable>",
-	Short:        "Initialize a cosmovisor daemon home directory.",
-	Args:         cobra.ExactArgs(1),
-	SilenceUsage: true,
+	Use:   "init <path to executable>",
+	Short: "Initializes a cosmovisor daemon home directory.",
+	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return InitializeCosmovisor(nil, args)
+		logger := cmd.Context().Value(cosmovisor.LoggerKey).(*zerolog.Logger)
+
+		return InitializeCosmovisor(logger, args)
 	},
 }
 
 // InitializeCosmovisor initializes the cosmovisor directories, current link, and initial executable.
-func InitializeCosmovisor(logger log.Logger, args []string) error {
+func InitializeCosmovisor(logger *zerolog.Logger, args []string) error {
 	if len(args) < 1 || len(args[0]) == 0 {
 		return errors.New("no <path to executable> provided")
 	}
@@ -44,18 +48,14 @@ func InitializeCosmovisor(logger log.Logger, args []string) error {
 		return err
 	}
 
-	if logger == nil {
-		logger = cfg.Logger(os.Stdout)
-	}
-
-	logger.Info("checking on the genesis/bin directory")
+	logger.Info().Msg("checking on the genesis/bin directory")
 	genBinExe := cfg.GenesisBin()
 	genBinDir, _ := filepath.Split(genBinExe)
 	genBinDir = filepath.Clean(genBinDir)
 	switch genBinDirInfo, genBinDirErr := os.Stat(genBinDir); {
 	case os.IsNotExist(genBinDirErr):
-		logger.Info(fmt.Sprintf("creating directory (and any parents): %q", genBinDir))
-		mkdirErr := os.MkdirAll(genBinDir, 0o750)
+		logger.Info().Msgf("creating directory (and any parents): %q", genBinDir)
+		mkdirErr := os.MkdirAll(genBinDir, 0o755)
 		if mkdirErr != nil {
 			return mkdirErr
 		}
@@ -64,29 +64,32 @@ func InitializeCosmovisor(logger log.Logger, args []string) error {
 	case !genBinDirInfo.IsDir():
 		return fmt.Errorf("the path %q already exists but is not a directory", genBinDir)
 	default:
-		logger.Info(fmt.Sprintf("the %q directory already exists", genBinDir))
+		logger.Info().Msgf("the %q directory already exists", genBinDir)
 	}
 
-	logger.Info("checking on the genesis/bin executable")
+	logger.Info().Msg("checking on the genesis/bin executable")
 	if _, err = os.Stat(genBinExe); os.IsNotExist(err) {
-		logger.Info(fmt.Sprintf("copying executable into place: %q", genBinExe))
+		logger.Info().Msgf("copying executable into place: %q", genBinExe)
 		if cpErr := copyFile(pathToExe, genBinExe); cpErr != nil {
 			return cpErr
 		}
 	} else {
-		logger.Info(fmt.Sprintf("the %q file already exists", genBinExe))
+		logger.Info().Msgf("the %q file already exists", genBinExe)
 	}
-	logger.Info(fmt.Sprintf("making sure %q is executable", genBinExe))
-	if err = plan.EnsureBinary(genBinExe); err != nil {
+	logger.Info().Msgf("making sure %q is executable", genBinExe)
+	if err = cosmovisor.MarkExecutable(genBinExe); err != nil {
+		return err
+	}
+	if err = cosmovisor.EnsureBinary(genBinExe); err != nil {
 		return err
 	}
 
-	logger.Info("checking on the current symlink and creating it if needed")
+	logger.Info().Msg("checking on the current symlink and creating it if needed")
 	cur, curErr := cfg.CurrentBin()
 	if curErr != nil {
 		return curErr
 	}
-	logger.Info(fmt.Sprintf("the current symlink points to: %q", cur))
+	logger.Info().Msgf("the current symlink points to: %q", cur)
 
 	return nil
 }
@@ -100,15 +103,6 @@ func getConfigForInitCmd() (*cosmovisor.Config, error) {
 		Home: os.Getenv(cosmovisor.EnvHome),
 		Name: os.Getenv(cosmovisor.EnvName),
 	}
-
-	var err error
-	if cfg.ColorLogs, err = cosmovisor.BooleanOption(cosmovisor.EnvColorLogs, true); err != nil {
-		errs = append(errs, err)
-	}
-	if cfg.TimeFormatLogs, err = cosmovisor.TimeFormatOptionFromEnv(cosmovisor.EnvTimeFormatLogs, time.Kitchen); err != nil {
-		errs = append(errs, err)
-	}
-
 	if len(cfg.Name) == 0 {
 		errs = append(errs, fmt.Errorf("%s is not set", cosmovisor.EnvName))
 	}
@@ -119,7 +113,7 @@ func getConfigForInitCmd() (*cosmovisor.Config, error) {
 		errs = append(errs, fmt.Errorf("%s must be an absolute path", cosmovisor.EnvHome))
 	}
 	if len(errs) > 0 {
-		return cfg, errors.Join(errs...)
+		return nil, cverrors.FlattenErrors(errs...)
 	}
 	return cfg, nil
 }

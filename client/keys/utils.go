@@ -7,19 +7,30 @@ import (
 
 	"sigs.k8s.io/yaml"
 
-	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/cosmos/cosmos-sdk/client/flags"
 	cryptokeyring "github.com/cosmos/cosmos-sdk/crypto/keyring"
 )
 
-func printKeyringRecord(w io.Writer, ko KeyOutput, output string) error {
+// available output formats.
+const (
+	OutputFormatText = "text"
+	OutputFormatJSON = "json"
+)
+
+type bechKeyOutFn func(k *cryptokeyring.Record) (cryptokeyring.KeyOutput, error)
+
+func printKeyringRecord(w io.Writer, k *cryptokeyring.Record, bechKeyOut bechKeyOutFn, output string) error {
+	ko, err := bechKeyOut(k)
+	if err != nil {
+		return err
+	}
+
 	switch output {
-	case flags.OutputFormatText:
-		if err := printTextRecords(w, []KeyOutput{ko}); err != nil {
+	case OutputFormatText:
+		if err := printTextRecords(w, []cryptokeyring.KeyOutput{ko}); err != nil {
 			return err
 		}
 
-	case flags.OutputFormatJSON:
+	case OutputFormatJSON:
 		out, err := json.Marshal(ko)
 		if err != nil {
 			return err
@@ -33,19 +44,20 @@ func printKeyringRecord(w io.Writer, ko KeyOutput, output string) error {
 	return nil
 }
 
-func printKeyringRecords(clientCtx client.Context, w io.Writer, records []*cryptokeyring.Record, output string) error {
-	kos, err := MkAccKeysOutput(records, clientCtx.AddressCodec)
+func printKeyringRecords(w io.Writer, records []*cryptokeyring.Record, output string) error {
+	kos, err := cryptokeyring.MkAccKeysOutput(records)
 	if err != nil {
 		return err
 	}
 
 	switch output {
-	case flags.OutputFormatText:
+	case OutputFormatText:
 		if err := printTextRecords(w, kos); err != nil {
 			return err
 		}
 
-	case flags.OutputFormatJSON:
+	case OutputFormatJSON:
+		// TODO https://github.com/cosmos/cosmos-sdk/issues/8046
 		out, err := json.Marshal(kos)
 		if err != nil {
 			return err
@@ -59,7 +71,7 @@ func printKeyringRecords(clientCtx client.Context, w io.Writer, records []*crypt
 	return nil
 }
 
-func printTextRecords(w io.Writer, kos []KeyOutput) error {
+func printTextRecords(w io.Writer, kos []cryptokeyring.KeyOutput) error {
 	out, err := yaml.Marshal(&kos)
 	if err != nil {
 		return err

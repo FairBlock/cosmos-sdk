@@ -8,7 +8,6 @@ import (
 	v2 "github.com/cosmos/cosmos-sdk/x/auth/migrations/v2"
 	v3 "github.com/cosmos/cosmos-sdk/x/auth/migrations/v3"
 	v4 "github.com/cosmos/cosmos-sdk/x/auth/migrations/v4"
-	v5 "github.com/cosmos/cosmos-sdk/x/auth/migrations/v5"
 	"github.com/cosmos/cosmos-sdk/x/auth/types"
 )
 
@@ -28,7 +27,7 @@ func NewMigrator(keeper AccountKeeper, queryServer grpc.Server, ss exported.Subs
 func (m Migrator) Migrate1to2(ctx sdk.Context) error {
 	var iterErr error
 
-	m.keeper.IterateAccounts(ctx, func(account sdk.AccountI) (stop bool) {
+	m.keeper.IterateAccounts(ctx, func(account types.AccountI) (stop bool) {
 		wb, err := v2.MigrateAccount(ctx, account, m.queryServer)
 		if err != nil {
 			iterErr = err
@@ -49,7 +48,7 @@ func (m Migrator) Migrate1to2(ctx sdk.Context) error {
 // Migrate2to3 migrates from consensus version 2 to version 3. Specifically, for each account
 // we index the account's ID to their address.
 func (m Migrator) Migrate2to3(ctx sdk.Context) error {
-	return v3.MigrateStore(ctx, m.keeper.storeService, m.keeper.cdc)
+	return v3.MigrateStore(ctx, m.keeper.storeKey, m.keeper.cdc)
 }
 
 // Migrate3to4 migrates the x/auth module state from the consensus version 3 to
@@ -57,34 +56,22 @@ func (m Migrator) Migrate2to3(ctx sdk.Context) error {
 // and managed by the x/params modules and stores them directly into the x/auth
 // module state.
 func (m Migrator) Migrate3to4(ctx sdk.Context) error {
-	return v4.Migrate(ctx, m.keeper.storeService, m.legacySubspace, m.keeper.cdc)
-}
-
-// Migrate4To5 migrates the x/auth module state from the consensus version 4 to 5.
-// It migrates the GlobalAccountNumber from being a protobuf defined value to a
-// big-endian encoded uint64, it also migrates it to use a more canonical prefix.
-func (m Migrator) Migrate4To5(ctx sdk.Context) error {
-	return v5.Migrate(ctx, m.keeper.storeService, m.keeper.AccountNumber)
+	return v4.Migrate(ctx, ctx.KVStore(m.keeper.storeKey), m.legacySubspace, m.keeper.cdc)
 }
 
 // V45_SetAccount implements V45_SetAccount
 // set the account without map to accAddr to accNumber.
 //
 // NOTE: This is used for testing purposes only.
-func (m Migrator) V45SetAccount(ctx sdk.Context, acc sdk.AccountI) error {
+func (m Migrator) V45_SetAccount(ctx sdk.Context, acc types.AccountI) error {
 	addr := acc.GetAddress()
-	store := m.keeper.storeService.OpenKVStore(ctx)
+	store := ctx.KVStore(m.keeper.storeKey)
 
-	bz, err := m.keeper.Accounts.ValueCodec().Encode(acc)
+	bz, err := m.keeper.MarshalAccount(acc)
 	if err != nil {
 		return err
 	}
 
-	return store.Set(addressStoreKey(addr), bz)
-}
-
-// addressStoreKey turn an address to key used to get it from the account store
-// NOTE(tip): exists for legacy compatibility
-func addressStoreKey(addr sdk.AccAddress) []byte {
-	return append(types.AddressStoreKeyPrefix, addr.Bytes()...)
+	store.Set(types.AddressStoreKey(addr), bz)
+	return nil
 }

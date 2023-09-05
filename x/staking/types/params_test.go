@@ -3,9 +3,8 @@ package types_test
 import (
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
 	"cosmossdk.io/math"
+	"github.com/stretchr/testify/require"
 
 	"github.com/cosmos/cosmos-sdk/x/staking/types"
 )

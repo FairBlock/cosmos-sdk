@@ -83,7 +83,7 @@ inflation calculation logic is needed, this can be achieved by defining and
 passing a function that matches `InflationCalculationFn`'s signature.
 
 ```go
-type InflationCalculationFn func(ctx sdk.Context, minter Minter, params Params, bondedRatio math.LegacyDec) math.LegacyDec
+type InflationCalculationFn func(ctx sdk.Context, minter Minter, params Params, bondedRatio sdk.Dec) sdk.Dec
 ```
 
 #### NextInflationRate
@@ -95,11 +95,11 @@ possible is defined to be 13% per year, however the annual inflation is capped
 as between 7% and 20%.
 
 ```go
-NextInflationRate(params Params, bondedRatio math.LegacyDec) (inflation math.LegacyDec) {
+NextInflationRate(params Params, bondedRatio sdk.Dec) (inflation sdk.Dec) {
 	inflationRateChangePerYear = (1 - bondedRatio/params.GoalBonded) * params.InflationRateChange
 	inflationRateChange = inflationRateChangePerYear/blocksPerYr
 
-	// increase the new annual inflation for this next block
+	// increase the new annual inflation for this next cycle
 	inflation += inflationRateChange
 	if inflation > params.InflationMax {
 		inflation = params.InflationMax
@@ -118,7 +118,7 @@ Calculate the annual provisions based on current total supply and inflation
 rate. This parameter is calculated once per block.
 
 ```go
-NextAnnualProvisions(params Params, totalSupply math.LegacyDec) (provisions math.LegacyDec) {
+NextAnnualProvisions(params Params, totalSupply sdk.Dec) (provisions sdk.Dec) {
 	return Inflation * totalSupply
 ```
 

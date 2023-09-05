@@ -2,13 +2,10 @@ package types
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"regexp"
 	"sort"
 	"strings"
-
-	"cosmossdk.io/math"
 )
 
 //-----------------------------------------------------------------------------
@@ -16,7 +13,7 @@ import (
 
 // NewCoin returns a new coin with a denomination and amount. It will panic if
 // the amount is negative or if the denomination is invalid.
-func NewCoin(denom string, amount math.Int) Coin {
+func NewCoin(denom string, amount Int) Coin {
 	coin := Coin{
 		Denom:  denom,
 		Amount: amount,
@@ -32,7 +29,7 @@ func NewCoin(denom string, amount math.Int) Coin {
 // NewInt64Coin returns a new coin with a denomination and amount. It will panic
 // if the amount is negative.
 func NewInt64Coin(denom string, amount int64) Coin {
-	return NewCoin(denom, math.NewInt(amount))
+	return NewCoin(denom, NewInt(amount))
 }
 
 // String provides a human-readable representation of a coin
@@ -45,10 +42,6 @@ func (coin Coin) String() string {
 func (coin Coin) Validate() error {
 	if err := ValidateDenom(coin.Denom); err != nil {
 		return err
-	}
-
-	if coin.Amount.IsNil() {
-		return errors.New("amount is nil")
 	}
 
 	if coin.Amount.IsNegative() {
@@ -99,9 +92,12 @@ func (coin Coin) IsLTE(other Coin) bool {
 }
 
 // IsEqual returns true if the two sets of Coins have the same value
-// Deprecated: Use Coin.Equal instead.
 func (coin Coin) IsEqual(other Coin) bool {
-	return coin.Equal(other)
+	if coin.Denom != other.Denom {
+		panic(fmt.Sprintf("invalid coin denominations; %s, %s", coin.Denom, other.Denom))
+	}
+
+	return coin.Amount.Equal(other.Amount)
 }
 
 // Add adds amounts of two coins with same denom. If the coins differ in denom then
@@ -115,7 +111,7 @@ func (coin Coin) Add(coinB Coin) Coin {
 }
 
 // AddAmount adds an amount to the Coin.
-func (coin Coin) AddAmount(amount math.Int) Coin {
+func (coin Coin) AddAmount(amount Int) Coin {
 	return Coin{coin.Denom, coin.Amount.Add(amount)}
 }
 
@@ -145,7 +141,7 @@ func (coin Coin) SafeSub(coinB Coin) (Coin, error) {
 }
 
 // SubAmount subtracts an amount from the Coin.
-func (coin Coin) SubAmount(amount math.Int) Coin {
+func (coin Coin) SubAmount(amount Int) Coin {
 	res := Coin{coin.Denom, coin.Amount.Sub(amount)}
 	if res.IsNegative() {
 		panic("negative coin amount")
@@ -330,25 +326,25 @@ func (coins Coins) safeAdd(coinsB Coins) (coalesced Coins) {
 		panic("Wrong argument: coins must be sorted")
 	}
 
-	uniqCoins := make(map[string]Coin, len(coins)+len(coinsB))
+	uniqCoins := make(map[string]Coins, len(coins)+len(coinsB))
 	// Traverse all the coins for each of the coins and coinsB.
 	for _, cL := range []Coins{coins, coinsB} {
 		for _, c := range cL {
-			if uc, ok := uniqCoins[c.Denom]; ok {
-				uniqCoins[c.Denom] = uc.Add(c)
-			} else {
-				uniqCoins[c.Denom] = c
-			}
+			uniqCoins[c.Denom] = append(uniqCoins[c.Denom], c)
 		}
 	}
 
-	coalesced = make(Coins, 0, len(uniqCoins))
-	for denom, c := range uniqCoins { //#nosec
-		if c.IsZero() {
-			continue
+	for denom, cL := range uniqCoins { //#nosec
+		comboCoin := Coin{Denom: denom, Amount: NewInt(0)}
+		for _, c := range cL {
+			comboCoin = comboCoin.Add(c)
 		}
-		c.Denom = denom
-		coalesced = append(coalesced, c)
+		if !comboCoin.IsZero() {
+			coalesced = append(coalesced, comboCoin)
+		}
+	}
+	if coalesced == nil {
+		return Coins{}
 	}
 	return coalesced.Sort()
 }
@@ -402,7 +398,7 @@ func (coins Coins) SafeSub(coinsB ...Coin) (Coins, bool) {
 // {2A, 3B} * 2 = {4A, 6B}
 // {2A} * 0 panics
 // Note, if IsValid was true on Coins, IsValid stays true.
-func (coins Coins) MulInt(x math.Int) Coins {
+func (coins Coins) MulInt(x Int) Coins {
 	coins, ok := coins.SafeMulInt(x)
 	if !ok {
 		panic("multiplying by zero is an invalid operation on coins")
@@ -413,7 +409,7 @@ func (coins Coins) MulInt(x math.Int) Coins {
 
 // SafeMulInt performs the same arithmetic as MulInt but returns false
 // if the `multiplier` is zero because it makes IsValid return false.
-func (coins Coins) SafeMulInt(x math.Int) (Coins, bool) {
+func (coins Coins) SafeMulInt(x Int) (Coins, bool) {
 	if x.IsZero() {
 		return nil, false
 	}
@@ -436,7 +432,7 @@ func (coins Coins) SafeMulInt(x math.Int) (Coins, bool) {
 // {2A} / 0 = panics
 // Note, if IsValid was true on Coins, IsValid stays true,
 // unless the `divisor` is greater than the smallest coin amount.
-func (coins Coins) QuoInt(x math.Int) Coins {
+func (coins Coins) QuoInt(x Int) Coins {
 	coins, ok := coins.SafeQuoInt(x)
 	if !ok {
 		panic("dividing by zero is an invalid operation on coins")
@@ -447,7 +443,7 @@ func (coins Coins) QuoInt(x math.Int) Coins {
 
 // SafeQuoInt performs the same arithmetic as QuoInt but returns an error
 // if the division cannot be done.
-func (coins Coins) SafeQuoInt(x math.Int) (Coins, bool) {
+func (coins Coins) SafeQuoInt(x Int) (Coins, bool) {
 	if x.IsZero() {
 		return nil, false
 	}
@@ -470,7 +466,7 @@ func (coins Coins) SafeQuoInt(x math.Int) (Coins, bool) {
 //	a.IsAllLTE(a.Max(b))
 //	b.IsAllLTE(a.Max(b))
 //	a.IsAllLTE(c) && b.IsAllLTE(c) == a.Max(b).IsAllLTE(c)
-//	a.Add(b...).Equal(a.Min(b).Add(a.Max(b)...))
+//	a.Add(b...).IsEqual(a.Min(b).Add(a.Max(b)...))
 //
 // E.g.
 // {1A, 3B, 2C}.Max({4A, 2B, 2C} == {4A, 3B, 2C})
@@ -516,7 +512,7 @@ func (coins Coins) Max(coinsB Coins) Coins {
 //	a.Min(b).IsAllLTE(a)
 //	a.Min(b).IsAllLTE(b)
 //	c.IsAllLTE(a) && c.IsAllLTE(b) == c.IsAllLTE(a.Min(b))
-//	a.Add(b...).Equal(a.Min(b).Add(a.Max(b)...))
+//	a.Add(b...).IsEqual(a.Min(b).Add(a.Max(b)...))
 //
 // E.g.
 // {1A, 3B, 2C}.Min({4A, 2B, 2C} == {1A, 2B, 2C})
@@ -659,8 +655,8 @@ func (coins Coins) IsZero() bool {
 	return true
 }
 
-// Equal returns true if the two sets of Coins have the same value
-func (coins Coins) Equal(coinsB Coins) bool {
+// IsEqual returns true if the two sets of Coins have the same value
+func (coins Coins) IsEqual(coinsB Coins) bool {
 	if len(coins) != len(coinsB) {
 		return false
 	}
@@ -669,7 +665,7 @@ func (coins Coins) Equal(coinsB Coins) bool {
 	coinsB = coinsB.Sort()
 
 	for i := 0; i < len(coins); i++ {
-		if !coins[i].Equal(coinsB[i]) {
+		if !coins[i].IsEqual(coinsB[i]) {
 			return false
 		}
 	}
@@ -683,18 +679,18 @@ func (coins Coins) Empty() bool {
 }
 
 // AmountOf returns the amount of a denom from coins
-func (coins Coins) AmountOf(denom string) math.Int {
+func (coins Coins) AmountOf(denom string) Int {
 	mustValidateDenom(denom)
 	return coins.AmountOfNoDenomValidation(denom)
 }
 
 // AmountOfNoDenomValidation returns the amount of a denom from coins
 // without validating the denomination.
-func (coins Coins) AmountOfNoDenomValidation(denom string) math.Int {
+func (coins Coins) AmountOfNoDenomValidation(denom string) Int {
 	if ok, c := coins.Find(denom); ok {
 		return c.Amount
 	}
-	return math.ZeroInt()
+	return ZeroInt()
 }
 
 // Find returns true and coin if the denom exists in coins. Otherwise it returns false
@@ -793,15 +789,26 @@ func (coins Coins) negative() Coins {
 
 // removeZeroCoins removes all zero coins from the given coin set in-place.
 func removeZeroCoins(coins Coins) Coins {
-	nonZeros := make([]Coin, 0, len(coins))
-
-	for _, coin := range coins {
-		if !coin.IsZero() {
-			nonZeros = append(nonZeros, coin)
+	for i := 0; i < len(coins); i++ {
+		if coins[i].IsZero() {
+			break
+		} else if i == len(coins)-1 {
+			return coins
 		}
 	}
 
-	return nonZeros
+	var result []Coin
+	if len(coins) > 0 {
+		result = make([]Coin, 0, len(coins)-1)
+	}
+
+	for _, coin := range coins {
+		if !coin.IsZero() {
+			result = append(result, coin)
+		}
+	}
+
+	return result
 }
 
 //-----------------------------------------------------------------------------

@@ -4,22 +4,19 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
-	errorsmod "cosmossdk.io/errors"
-	"cosmossdk.io/store/prefix"
-	storetypes "cosmossdk.io/store/types"
-
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/codec/types"
+	"github.com/cosmos/cosmos-sdk/store/prefix"
 	"github.com/cosmos/cosmos-sdk/testutil/testdata"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/cosmos/cosmos-sdk/x/group/errors"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestTypeSafeRowGetter(t *testing.T) {
-	storeKey := storetypes.NewKVStoreKey("test")
+	storeKey := sdk.NewKVStoreKey("test")
 	ctx := NewMockContext()
 	prefixKey := [2]byte{0x2}
 	store := prefix.NewStore(ctx.KVStore(storeKey), prefixKey[:])
@@ -35,7 +32,7 @@ func TestTypeSafeRowGetter(t *testing.T) {
 		srcRowID     RowID
 		srcModelType reflect.Type
 		expObj       interface{}
-		expErr       *errorsmod.Error
+		expErr       *sdkerrors.Error
 	}{
 		"happy path": {
 			srcRowID:     EncodeSequence(1),

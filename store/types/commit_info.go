@@ -1,9 +1,9 @@
 package types
 
 import (
-	cmtprotocrypto "github.com/cometbft/cometbft/proto/tendermint/crypto"
+	tmcrypto "github.com/cometbft/cometbft/proto/tendermint/crypto"
 
-	"cosmossdk.io/store/internal/maps"
+	sdkmaps "github.com/cosmos/cosmos-sdk/store/internal/maps"
 )
 
 // GetHash returns the GetHash from the CommitID.
@@ -33,11 +33,11 @@ func (ci CommitInfo) Hash() []byte {
 		return nil
 	}
 
-	rootHash, _, _ := maps.ProofsFromMap(ci.toMap())
+	rootHash, _, _ := sdkmaps.ProofsFromMap(ci.toMap())
 	return rootHash
 }
 
-func (ci CommitInfo) ProofOp(storeName string) cmtprotocrypto.ProofOp {
+func (ci CommitInfo) ProofOp(storeName string) tmcrypto.ProofOp {
 	ret, err := ProofOpFromMap(ci.toMap(), storeName)
 	if err != nil {
 		panic(err)

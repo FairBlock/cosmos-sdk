@@ -4,24 +4,14 @@ import (
 	"context"
 	"fmt"
 
-	abci "github.com/cometbft/cometbft/abci/types"
 	gogogrpc "github.com/cosmos/gogoproto/grpc"
 	"github.com/cosmos/gogoproto/proto"
 	"google.golang.org/grpc"
-
-	errorsmod "cosmossdk.io/errors"
 
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 )
-
-// MessageRouter ADR 031 request type routing
-// https://github.com/cosmos/cosmos-sdk/blob/main/docs/architecture/adr-031-msg-service.md
-type MessageRouter interface {
-	Handler(msg sdk.Msg) MsgServiceHandler
-	HandlerByTypeURL(typeURL string) MsgServiceHandler
-}
 
 // MsgServiceRouter routes fully-qualified Msg service methods to their handler.
 type MsgServiceRouter struct {
@@ -39,12 +29,12 @@ func NewMsgServiceRouter() *MsgServiceRouter {
 	}
 }
 
+// MsgServiceHandler defines a function type which handles Msg service message.
+type MsgServiceHandler = func(ctx sdk.Context, req sdk.Msg) (*sdk.Result, error)
+
 func (msr *MsgServiceRouter) SetCircuit(cb CircuitBreaker) {
 	msr.circuitBreaker = cb
 }
-
-// MsgServiceHandler defines a function type which handles Msg service message.
-type MsgServiceHandler = func(ctx sdk.Context, req sdk.Msg) (*sdk.Result, error)
 
 // Handler returns the MsgServiceHandler for a given msg or nil if not found.
 func (msr *MsgServiceRouter) Handler(msg sdk.Msg) MsgServiceHandler {
@@ -121,21 +111,20 @@ func (msr *MsgServiceRouter) RegisterService(sd *grpc.ServiceDesc, handler inter
 			)
 		}
 
-		msr.routes[requestTypeName] = func(ctx sdk.Context, msg sdk.Msg) (*sdk.Result, error) {
+		msr.routes[requestTypeName] = func(ctx sdk.Context, req sdk.Msg) (*sdk.Result, error) {
 			ctx = ctx.WithEventManager(sdk.NewEventManager())
 			interceptor := func(goCtx context.Context, _ interface{}, _ *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 				goCtx = context.WithValue(goCtx, sdk.SdkContextKey, ctx)
-				return handler(goCtx, msg)
+				return handler(goCtx, req)
 			}
 
-			if m, ok := msg.(sdk.HasValidateBasic); ok {
-				if err := m.ValidateBasic(); err != nil {
-					return nil, err
-				}
+			if err := req.ValidateBasic(); err != nil {
+				return nil, err
 			}
 
 			if msr.circuitBreaker != nil {
-				msgURL := sdk.MsgTypeURL(msg)
+				msgURL := sdk.MsgTypeURL(req)
+
 				isAllowed, err := msr.circuitBreaker.IsAllowed(ctx, msgURL)
 				if err != nil {
 					return nil, err
@@ -145,33 +134,19 @@ func (msr *MsgServiceRouter) RegisterService(sd *grpc.ServiceDesc, handler inter
 					return nil, fmt.Errorf("circuit breaker disables execution of this message: %s", msgURL)
 				}
 			}
-
 			// Call the method handler from the service description with the handler object.
 			// We don't do any decoding here because the decoding was already done.
-			res, err := methodHandler(handler, ctx, noopDecoder, interceptor)
+			res, err := methodHandler(handler, sdk.WrapSDKContext(ctx), noopDecoder, interceptor)
 			if err != nil {
 				return nil, err
 			}
 
 			resMsg, ok := res.(proto.Message)
 			if !ok {
-				return nil, errorsmod.Wrapf(sdkerrors.ErrInvalidType, "Expecting proto.Message, got %T", resMsg)
+				return nil, sdkerrors.Wrapf(sdkerrors.ErrInvalidType, "Expecting proto.Message, got %T", resMsg)
 			}
 
-			anyResp, err := codectypes.NewAnyWithValue(resMsg)
-			if err != nil {
-				return nil, err
-			}
-
-			var events []abci.Event
-			if evtMgr := ctx.EventManager(); evtMgr != nil {
-				events = evtMgr.ABCIEvents()
-			}
-
-			return &sdk.Result{
-				Events:       events,
-				MsgResponses: []*codectypes.Any{anyResp},
-			}, nil
+			return sdk.WrapServiceResult(ctx, resMsg, err)
 		}
 	}
 }

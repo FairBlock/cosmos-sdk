@@ -1,9 +1,8 @@
 package keyring
 
 import (
+	"fmt"
 	"strings"
-
-	"github.com/cockroachdb/errors"
 
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 )
@@ -22,7 +21,7 @@ func NewSigningAlgoFromString(str string, algoList SigningAlgoList) (SignatureAl
 			return algo, nil
 		}
 	}
-	return nil, errors.Wrap(ErrUnsupportedSigningAlgo, str)
+	return nil, fmt.Errorf("provided algorithm %q is not supported", str)
 }
 
 // SigningAlgoList is a slice of signature algorithms

@@ -1,8 +1,6 @@
 package v4
 
 import (
-	storetypes "cosmossdk.io/core/store"
-
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth/exported"
@@ -15,8 +13,7 @@ var ParamsKey = []byte{0x00}
 // version 4. Specifically, it takes the parameters that are currently stored
 // and managed by the x/params modules and stores them directly into the x/auth
 // module state.
-func Migrate(ctx sdk.Context, storeService storetypes.KVStoreService, legacySubspace exported.Subspace, cdc codec.BinaryCodec) error {
-	store := storeService.OpenKVStore(ctx)
+func Migrate(ctx sdk.Context, store sdk.KVStore, legacySubspace exported.Subspace, cdc codec.BinaryCodec) error {
 	var currParams types.Params
 	legacySubspace.GetParamSet(ctx, &currParams)
 
@@ -25,5 +22,7 @@ func Migrate(ctx sdk.Context, storeService storetypes.KVStoreService, legacySubs
 	}
 
 	bz := cdc.MustMarshal(&currParams)
-	return store.Set(ParamsKey, bz)
+	store.Set(ParamsKey, bz)
+
+	return nil
 }

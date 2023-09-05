@@ -8,7 +8,9 @@ sidebar_position: 1
 `Keeper`s refer to a Cosmos SDK abstraction whose role is to manage access to the subset of the state defined by various modules. `Keeper`s are module-specific, i.e. the subset of state defined by a module can only be accessed by a `keeper` defined in said module. If a module needs to access the subset of state defined by another module, a reference to the second module's internal `keeper` needs to be passed to the first one. This is done in `app.go` during the instantiation of module keepers.
 :::
 
-:::note Pre-requisite Readings
+:::note
+
+### Pre-requisite Readings
 
 * [Introduction to Cosmos SDK Modules](./01-intro.md)
 
@@ -41,26 +43,25 @@ type Keeper struct {
 For example, here is the type definition of the `keeper` from the `staking` module:
 
 ```go reference
-https://github.com/cosmos/cosmos-sdk/blob/v0.50.0-alpha.0/x/staking/keeper/keeper.go#L23-L31
+https://github.com/cosmos/cosmos-sdk/blob/v0.47.0-rc1/x/staking/keeper/keeper.go#L23-L31
 ```
 
 Let us go through the different parameters:
 
 * An expected `keeper` is a `keeper` external to a module that is required by the internal `keeper` of said module. External `keeper`s are listed in the internal `keeper`'s type definition as interfaces. These interfaces are themselves defined in an `expected_keepers.go` file in the root of the module's folder. In this context, interfaces are used to reduce the number of dependencies, as well as to facilitate the maintenance of the module itself.
 * `storeKey`s grant access to the store(s) of the [multistore](../core/04-store.md) managed by the module. They should always remain unexposed to external modules.
-* `cdc` is the [codec](../core/05-encoding.md) used to marshall and unmarshall structs to/from `[]byte`. The `cdc` can be any of `codec.BinaryCodec`, `codec.JSONCodec` or `codec.Codec` based on your requirements. It can be either a proto or amino codec as long as they implement these interfaces. 
-* The authority listed is a module account or user account that has the right to change module level parameters. Previously this was handled by the param module, which has been deprecated.
+* `cdc` is the [codec](../core/05-encoding.md) used to marshall and unmarshall structs to/from `[]byte`. The `cdc` can be any of `codec.BinaryCodec`, `codec.JSONCodec` or `codec.Codec` based on your requirements. It can be either a proto or amino codec as long as they implement these interfaces. The authority listed is a module account or user account that has the right to change module level parameters. Previously this was handled by the param module, which has been deprecated.
 
 Of course, it is possible to define different types of internal `keeper`s for the same module (e.g. a read-only `keeper`). Each type of `keeper` comes with its own constructor function, which is called from the [application's constructor function](../basics/00-app-anatomy.md). This is where `keeper`s are instantiated, and where developers make sure to pass correct instances of modules' `keeper`s to other modules that require them.
 
 ## Implementing Methods
 
-`Keeper`s primarily expose getter and setter methods for the store(s) managed by their module. These methods should remain as simple as possible and strictly be limited to getting or setting the requested value, as validity checks should have already been performed by the [`Msg` server](./03-msg-services.md) when `keeper`s' methods are called.
+`Keeper`s primarily expose getter and setter methods for the store(s) managed by their module. These methods should remain as simple as possible and strictly be limited to getting or setting the requested value, as validity checks should have already been performed via the `ValidateBasic()` method of the [`message`](./02-messages-and-queries.md#messages) and the [`Msg` server](./03-msg-services.md) when `keeper`s' methods are called.
 
 Typically, a *getter* method will have the following signature
 
 ```go
-func (k Keeper) Get(ctx context.Context, key string) returnType
+func (k Keeper) Get(ctx sdk.Context, key string) returnType
 ```
 
 and the method will go through the following steps:
@@ -72,7 +73,7 @@ and the method will go through the following steps:
 Similarly, a *setter* method will have the following signature
 
 ```go
-func (k Keeper) Set(ctx context.Context, key string, value valueType)
+func (k Keeper) Set(ctx sdk.Context, key string, value valueType)
 ```
 
 and the method will go through the following steps:
@@ -81,12 +82,12 @@ and the method will go through the following steps:
 2. Marshal `value` to `[]byte` using the codec `cdc`.
 3. Set the encoded value in the store at location `key` using the `Set(key []byte, value []byte)` method of the store.
 
-For more, see an example of `keeper`'s [methods implementation from the `staking` module](https://github.com/cosmos/cosmos-sdk/blob/v0.50.0-alpha.0/x/staking/keeper/keeper.go).
+For more, see an example of `keeper`'s [methods implementation from the `staking` module](https://github.com/cosmos/cosmos-sdk/blob/v0.47.0-rc1/x/staking/keeper/keeper.go).
 
 The [module `KVStore`](../core/04-store.md#kvstore-and-commitkvstore-interfaces) also provides an `Iterator()` method which returns an `Iterator` object to iterate over a domain of keys.
 
 This is an example from the `auth` module to iterate accounts:
 
 ```go reference
-https://github.com/cosmos/cosmos-sdk/blob/v0.50.0-alpha.0/x/auth/keeper/account.go
+https://github.com/cosmos/cosmos-sdk/blob/v0.47.0-rc1/x/auth/keeper/account.go#L94-L108
 ```

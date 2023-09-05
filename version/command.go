@@ -2,29 +2,25 @@ package version
 
 import (
 	"encoding/json"
-	"fmt"
 	"strings"
 
+	"github.com/cometbft/cometbft/libs/cli"
 	"github.com/spf13/cobra"
 	"sigs.k8s.io/yaml"
 )
 
-const (
-	flagLong   = "long"
-	flagOutput = "output"
-)
+const flagLong = "long"
 
 // NewVersionCommand returns a CLI command to interactively print the application binary version information.
 func NewVersionCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "version",
 		Short: "Print the application binary version information",
-		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			verInfo := NewInfo()
 
 			if long, _ := cmd.Flags().GetBool(flagLong); !long {
-				fmt.Fprintln(cmd.OutOrStdout(), verInfo.Version)
+				cmd.Println(verInfo.Version)
 				return nil
 			}
 
@@ -33,7 +29,7 @@ func NewVersionCommand() *cobra.Command {
 				err error
 			)
 
-			output, _ := cmd.Flags().GetString(flagOutput)
+			output, _ := cmd.Flags().GetString(cli.OutputFlag)
 			switch strings.ToLower(output) {
 			case "json":
 				bz, err = json.Marshal(verInfo)
@@ -46,13 +42,13 @@ func NewVersionCommand() *cobra.Command {
 				return err
 			}
 
-			fmt.Fprintln(cmd.OutOrStdout(), string(bz))
+			cmd.Println(string(bz))
 			return nil
 		},
 	}
 
 	cmd.Flags().Bool(flagLong, false, "Print long version information")
-	cmd.Flags().StringP(flagOutput, "o", "text", "Output format (text|json)")
+	cmd.Flags().StringP(cli.OutputFlag, "o", "text", "Output format (text|json)")
 
 	return cmd
 }

@@ -5,45 +5,49 @@ import (
 	"encoding/json"
 	"fmt"
 
+	abci "github.com/cometbft/cometbft/abci/types"
 	gwruntime "github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/spf13/cast"
 	"github.com/spf13/cobra"
 
 	modulev1 "cosmossdk.io/api/cosmos/upgrade/module/v1"
-	"cosmossdk.io/core/address"
 	"cosmossdk.io/core/appmodule"
-	"cosmossdk.io/core/store"
 	"cosmossdk.io/depinject"
-	"cosmossdk.io/x/upgrade/client/cli"
-	"cosmossdk.io/x/upgrade/keeper"
-	"cosmossdk.io/x/upgrade/types"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
+	"github.com/cosmos/cosmos-sdk/runtime"
 	"github.com/cosmos/cosmos-sdk/server"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
+	store "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
+	govv1beta1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
+	"github.com/cosmos/cosmos-sdk/x/upgrade/client/cli"
+	"github.com/cosmos/cosmos-sdk/x/upgrade/keeper"
+	"github.com/cosmos/cosmos-sdk/x/upgrade/types"
 )
 
 func init() {
 	types.RegisterLegacyAminoCodec(codec.NewLegacyAmino())
 }
 
-// ConsensusVersion defines the current x/upgrade module consensus version.
-const ConsensusVersion uint64 = 3
+const (
+	consensusVersion uint64 = 2
+)
 
-var _ module.AppModuleBasic = AppModuleBasic{}
+var (
+	_ module.BeginBlockAppModule = AppModule{}
+	_ module.AppModuleBasic      = AppModuleBasic{}
+)
 
 // AppModuleBasic implements the sdk.AppModuleBasic interface
-type AppModuleBasic struct {
-	ac address.Codec
-}
+type AppModuleBasic struct{}
 
 // Name returns the ModuleName
 func (AppModuleBasic) Name() string {
@@ -62,13 +66,18 @@ func (AppModuleBasic) RegisterGRPCGatewayRoutes(clientCtx client.Context, mux *g
 	}
 }
 
+// GetQueryCmd returns the CLI query commands for this module
+func (AppModuleBasic) GetQueryCmd() *cobra.Command {
+	return cli.GetQueryCmd()
+}
+
 // GetTxCmd returns the CLI transaction commands for this module
-func (ab AppModuleBasic) GetTxCmd() *cobra.Command {
-	return cli.GetTxCmd(ab.ac)
+func (AppModuleBasic) GetTxCmd() *cobra.Command {
+	return cli.GetTxCmd()
 }
 
 // RegisterInterfaces registers interfaces and implementations of the upgrade module.
-func (AppModuleBasic) RegisterInterfaces(registry codectypes.InterfaceRegistry) {
+func (b AppModuleBasic) RegisterInterfaces(registry codectypes.InterfaceRegistry) {
 	types.RegisterInterfaces(registry)
 }
 
@@ -79,24 +88,23 @@ type AppModule struct {
 }
 
 // NewAppModule creates a new AppModule object
-func NewAppModule(keeper *keeper.Keeper, ac address.Codec) AppModule {
+func NewAppModule(keeper *keeper.Keeper) AppModule {
 	return AppModule{
-		AppModuleBasic: AppModuleBasic{ac: ac},
+		AppModuleBasic: AppModuleBasic{},
 		keeper:         keeper,
 	}
 }
 
-var (
-	_ appmodule.AppModule       = AppModule{}
-	_ appmodule.HasBeginBlocker = AppModule{}
-	_ module.HasGenesis         = AppModule{}
-)
+var _ appmodule.AppModule = AppModule{}
 
 // IsOnePerModuleType implements the depinject.OnePerModuleType interface.
 func (am AppModule) IsOnePerModuleType() {}
 
 // IsAppModule implements the appmodule.AppModule interface.
 func (am AppModule) IsAppModule() {}
+
+// RegisterInvariants does nothing, there are no invariants to enforce
+func (AppModule) RegisterInvariants(_ sdk.InvariantRegistry) {}
 
 // RegisterServices registers module services.
 func (am AppModule) RegisterServices(cfg module.Configurator) {
@@ -108,34 +116,24 @@ func (am AppModule) RegisterServices(cfg module.Configurator) {
 	if err != nil {
 		panic(fmt.Sprintf("failed to migrate x/%s from version 1 to 2: %v", types.ModuleName, err))
 	}
-	err = cfg.RegisterMigration(types.ModuleName, 2, m.Migrate2to3)
-	if err != nil {
-		panic(fmt.Sprintf("failed to migrate x/%s from version 2 to 3: %v", types.ModuleName, err))
-	}
 }
 
 // InitGenesis is ignored, no sense in serializing future upgrades
-func (am AppModule) InitGenesis(ctx sdk.Context, _ codec.JSONCodec, _ json.RawMessage) {
+func (am AppModule) InitGenesis(ctx sdk.Context, _ codec.JSONCodec, _ json.RawMessage) []abci.ValidatorUpdate {
 	// set version map automatically if available
 	if versionMap := am.keeper.GetInitVersionMap(); versionMap != nil {
 		// chains can still use a custom init chainer for setting the version map
 		// this means that we need to combine the manually wired modules version map with app wiring enabled modules version map
-		moduleVM, err := am.keeper.GetModuleVersionMap(ctx)
-		if err != nil {
-			panic(err)
-		}
-
-		for name, version := range moduleVM {
+		for name, version := range am.keeper.GetModuleVersionMap(ctx) {
 			if _, ok := versionMap[name]; !ok {
 				versionMap[name] = version
 			}
 		}
 
-		err = am.keeper.SetModuleVersionMap(ctx, versionMap)
-		if err != nil {
-			panic(err)
-		}
+		am.keeper.SetModuleVersionMap(ctx, versionMap)
 	}
+
+	return []abci.ValidatorUpdate{}
 }
 
 // DefaultGenesis is an empty object
@@ -144,7 +142,7 @@ func (AppModuleBasic) DefaultGenesis(_ codec.JSONCodec) json.RawMessage {
 }
 
 // ValidateGenesis is always successful, as we ignore the value
-func (AppModuleBasic) ValidateGenesis(_ codec.JSONCodec, _ client.TxEncodingConfig, _ json.RawMessage) error {
+func (AppModuleBasic) ValidateGenesis(_ codec.JSONCodec, config client.TxEncodingConfig, _ json.RawMessage) error {
 	return nil
 }
 
@@ -154,17 +152,14 @@ func (am AppModule) ExportGenesis(_ sdk.Context, cdc codec.JSONCodec) json.RawMe
 }
 
 // ConsensusVersion implements AppModule/ConsensusVersion.
-func (AppModule) ConsensusVersion() uint64 { return ConsensusVersion }
+func (AppModule) ConsensusVersion() uint64 { return consensusVersion }
 
 // BeginBlock calls the upgrade module hooks
 //
 // CONTRACT: this is registered in BeginBlocker *before* all other modules' BeginBlock functions
-func (am AppModule) BeginBlock(ctx context.Context) error {
-	return BeginBlocker(ctx, am.keeper)
+func (am AppModule) BeginBlock(ctx sdk.Context, req abci.RequestBeginBlock) {
+	BeginBlocker(am.keeper, ctx, req)
 }
-
-// IsUpgradeModule implements the module.UpgradeModule interface.
-func (am AppModuleBasic) IsUpgradeModule() {}
 
 //
 // App Wiring Setup
@@ -177,26 +172,26 @@ func init() {
 	)
 }
 
-type ModuleInputs struct {
+type UpgradeInputs struct {
 	depinject.In
 
-	Config             *modulev1.Module
-	StoreService       store.KVStoreService
-	Cdc                codec.Codec
-	AddressCodec       address.Codec
-	AppVersionModifier baseapp.AppVersionModifier
+	Config *modulev1.Module
+	Key    *store.KVStoreKey
+	Cdc    codec.Codec
 
 	AppOpts servertypes.AppOptions `optional:"true"`
 }
 
-type ModuleOutputs struct {
+type UpgradeOutputs struct {
 	depinject.Out
 
 	UpgradeKeeper *keeper.Keeper
 	Module        appmodule.AppModule
+	GovHandler    govv1beta1.HandlerRoute
+	BaseAppOption runtime.BaseAppOption
 }
 
-func ProvideModule(in ModuleInputs) ModuleOutputs {
+func ProvideModule(in UpgradeInputs) UpgradeOutputs {
 	var (
 		homePath           string
 		skipUpgradeHeights = make(map[int64]bool)
@@ -217,10 +212,14 @@ func ProvideModule(in ModuleInputs) ModuleOutputs {
 	}
 
 	// set the governance module account as the authority for conducting upgrades
-	k := keeper.NewKeeper(skipUpgradeHeights, in.StoreService, in.Cdc, homePath, in.AppVersionModifier, authority.String())
-	m := NewAppModule(k, in.AddressCodec)
+	k := keeper.NewKeeper(skipUpgradeHeights, in.Key, in.Cdc, homePath, nil, authority.String())
+	baseappOpt := func(app *baseapp.BaseApp) {
+		k.SetVersionSetter(app)
+	}
+	m := NewAppModule(k)
+	gh := govv1beta1.HandlerRoute{RouteKey: types.RouterKey, Handler: NewSoftwareUpgradeProposalHandler(k)}
 
-	return ModuleOutputs{UpgradeKeeper: k, Module: m}
+	return UpgradeOutputs{UpgradeKeeper: k, Module: m, GovHandler: gh, BaseAppOption: baseappOpt}
 }
 
 func PopulateVersionMap(upgradeKeeper *keeper.Keeper, modules map[string]appmodule.AppModule) {

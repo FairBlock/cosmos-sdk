@@ -5,6 +5,8 @@ import (
 	"strings"
 	"time"
 
+	"sigs.k8s.io/yaml"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
@@ -14,6 +16,12 @@ type Periods []Period
 // Duration is converts the period Length from seconds to a time.Duration
 func (p Period) Duration() time.Duration {
 	return time.Duration(p.Length) * time.Second
+}
+
+// String implements the fmt.Stringer interface
+func (p Period) String() string {
+	out, _ := yaml.Marshal(p)
+	return string(out)
 }
 
 // TotalLength return the total length in seconds for a period

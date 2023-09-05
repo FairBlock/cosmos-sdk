@@ -1,9 +1,7 @@
 package keyring
 
 import (
-	"github.com/cockroachdb/errors"
-
-	errorsmod "cosmossdk.io/errors"
+	"errors"
 
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
@@ -11,14 +9,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/types"
 )
 
-var (
-	// ErrPrivKeyExtr is used to output an error if extraction of a private key from Local item fails.
-	ErrPrivKeyExtr = errors.New("private key extraction works only for Local")
-	// ErrPrivKeyNotAvailable is used when a Record_Local.PrivKey is nil.
-	ErrPrivKeyNotAvailable = errors.New("private key is not available")
-	// ErrCastAny is used to output an error if cast from types.Any fails.
-	ErrCastAny = errors.New("unable to cast to cryptotypes")
-)
+// ErrPrivKeyExtr is used to output an error if extraction of a private key from Local item fails
+var ErrPrivKeyExtr = errors.New("private key extraction works only for Local")
 
 func newRecord(name string, pk cryptotypes.PubKey, item isRecord_Item) (*Record, error) {
 	any, err := codectypes.NewAnyWithValue(pk)
@@ -71,7 +63,7 @@ func NewMultiRecord(name string, pk cryptotypes.PubKey) (*Record, error) {
 func (k *Record) GetPubKey() (cryptotypes.PubKey, error) {
 	pk, ok := k.PubKey.GetCachedValue().(cryptotypes.PubKey)
 	if !ok {
-		return nil, errorsmod.Wrap(ErrCastAny, "PubKey")
+		return nil, errors.New("unable to cast any to cryptotypes.PubKey")
 	}
 
 	return pk, nil
@@ -128,12 +120,12 @@ func extractPrivKeyFromRecord(k *Record) (cryptotypes.PrivKey, error) {
 
 func extractPrivKeyFromLocal(rl *Record_Local) (cryptotypes.PrivKey, error) {
 	if rl.PrivKey == nil {
-		return nil, ErrPrivKeyNotAvailable
+		return nil, errors.New("private key is not available")
 	}
 
 	priv, ok := rl.PrivKey.GetCachedValue().(cryptotypes.PrivKey)
 	if !ok {
-		return nil, errorsmod.Wrap(ErrCastAny, "PrivKey")
+		return nil, errors.New("unable to cast any to cryptotypes.PrivKey")
 	}
 
 	return priv, nil

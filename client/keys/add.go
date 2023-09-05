@@ -82,7 +82,7 @@ Example:
 
 	// support old flags name for backwards compatibility
 	f.SetNormalizeFunc(func(f *pflag.FlagSet, name string) pflag.NormalizedName {
-		if name == flags.FlagKeyAlgorithm {
+		if name == "algo" {
 			name = flags.FlagKeyType
 		}
 
@@ -184,7 +184,7 @@ func runAddCmd(ctx client.Context, cmd *cobra.Command, args []string, inBuf *buf
 				return err
 			}
 
-			return printCreate(ctx, cmd, k, false, "", outputFormat)
+			return printCreate(cmd, k, false, "", outputFormat)
 		}
 	}
 
@@ -200,7 +200,7 @@ func runAddCmd(ctx client.Context, cmd *cobra.Command, args []string, inBuf *buf
 			return err
 		}
 
-		return printCreate(ctx, cmd, k, false, "", outputFormat)
+		return printCreate(cmd, k, false, "", outputFormat)
 	}
 
 	coinType, _ := cmd.Flags().GetUint32(flagCoinType)
@@ -223,14 +223,14 @@ func runAddCmd(ctx client.Context, cmd *cobra.Command, args []string, inBuf *buf
 			return err
 		}
 
-		return printCreate(ctx, cmd, k, false, "", outputFormat)
+		return printCreate(cmd, k, false, "", outputFormat)
 	}
 
 	// Get bip39 mnemonic
 	var mnemonic, bip39Passphrase string
 
-	recoverFlag, _ := cmd.Flags().GetBool(flagRecover)
-	if recoverFlag {
+	recover, _ := cmd.Flags().GetBool(flagRecover)
+	if recover {
 		mnemonic, err = input.GetString("Enter your bip39 mnemonic", inBuf)
 		if err != nil {
 			return err
@@ -251,7 +251,7 @@ func runAddCmd(ctx client.Context, cmd *cobra.Command, args []string, inBuf *buf
 	}
 
 	if len(mnemonic) == 0 {
-		// read entropy seed straight from cmtcrypto.Rand and convert to mnemonic
+		// read entropy seed straight from tmcrypto.Rand and convert to mnemonic
 		entropySeed, err := bip39.NewEntropy(mnemonicEntropySize)
 		if err != nil {
 			return err
@@ -291,36 +291,31 @@ func runAddCmd(ctx client.Context, cmd *cobra.Command, args []string, inBuf *buf
 	}
 
 	// Recover key from seed passphrase
-	if recoverFlag {
+	if recover {
 		// Hide mnemonic from output
 		showMnemonic = false
 		mnemonic = ""
 	}
 
-	return printCreate(ctx, cmd, k, showMnemonic, mnemonic, outputFormat)
+	return printCreate(cmd, k, showMnemonic, mnemonic, outputFormat)
 }
 
-func printCreate(ctx client.Context, cmd *cobra.Command, k *keyring.Record, showMnemonic bool, mnemonic, outputFormat string) error {
+func printCreate(cmd *cobra.Command, k *keyring.Record, showMnemonic bool, mnemonic, outputFormat string) error {
 	switch outputFormat {
-	case flags.OutputFormatText:
+	case OutputFormatText:
 		cmd.PrintErrln()
-		ko, err := MkAccKeyOutput(k, ctx.AddressCodec)
-		if err != nil {
-			return err
-		}
-
-		if err := printKeyringRecord(cmd.OutOrStdout(), ko, outputFormat); err != nil {
+		if err := printKeyringRecord(cmd.OutOrStdout(), k, keyring.MkAccKeyOutput, outputFormat); err != nil {
 			return err
 		}
 
 		// print mnemonic unless requested not to.
 		if showMnemonic {
 			if _, err := fmt.Fprintf(cmd.ErrOrStderr(), "\n**Important** write this mnemonic phrase in a safe place.\nIt is the only way to recover your account if you ever forget your password.\n\n%s\n", mnemonic); err != nil {
-				return fmt.Errorf("failed to print mnemonic: %w", err)
+				return fmt.Errorf("failed to print mnemonic: %v", err)
 			}
 		}
-	case flags.OutputFormatJSON:
-		out, err := MkAccKeyOutput(k, ctx.AddressCodec)
+	case OutputFormatJSON:
+		out, err := keyring.MkAccKeyOutput(k)
 		if err != nil {
 			return err
 		}

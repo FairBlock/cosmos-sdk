@@ -22,19 +22,16 @@ done
 
 cd ..
 
-# generate tests proto code
+# generate codec/testdata proto code
 (cd testutil/testdata; buf generate)
+
+# generate baseapp test messages
 (cd baseapp/testutil; buf generate)
-(cd tests/integration/tx/internal; make codegen)
 
 # move proto files to the right places
 cp -r github.com/cosmos/cosmos-sdk/* ./
-cp -r cosmossdk.io/** ./
-rm -rf github.com cosmossdk.io
+rm -rf github.com
 
 go mod tidy
 
 ./scripts/protocgen-pulsar.sh
-
-echo "Formatting protobuf files"
-find ./ -name "*.proto" -exec clang-format -i {} \;

@@ -5,7 +5,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/authz"
 )
 
-// InitGenesis initializes new authz genesis
+// InitGenesis new authz genesis
 func (k Keeper) InitGenesis(ctx sdk.Context, data *authz.GenesisState) {
 	now := ctx.BlockTime()
 	for _, entry := range data.Authorization {
@@ -14,21 +14,15 @@ func (k Keeper) InitGenesis(ctx sdk.Context, data *authz.GenesisState) {
 			continue
 		}
 
-		grantee, err := k.authKeeper.AddressCodec().StringToBytes(entry.Grantee)
-		if err != nil {
-			panic(err)
-		}
-		granter, err := k.authKeeper.AddressCodec().StringToBytes(entry.Granter)
-		if err != nil {
-			panic(err)
-		}
+		grantee := sdk.MustAccAddressFromBech32(entry.Grantee)
+		granter := sdk.MustAccAddressFromBech32(entry.Granter)
 
 		a, ok := entry.Authorization.GetCachedValue().(authz.Authorization)
 		if !ok {
 			panic("expected authorization")
 		}
 
-		err = k.SaveGrant(ctx, grantee, granter, a, entry.Expiration)
+		err := k.SaveGrant(ctx, grantee, granter, a, entry.Expiration)
 		if err != nil {
 			panic(err)
 		}

@@ -4,7 +4,8 @@
 const lightCodeTheme = require("prism-react-renderer/themes/github");
 const darkCodeTheme = require("prism-react-renderer/themes/dracula");
 
-const lastVersion = "v0.47"; // TODO change with v0.50 at release.
+// const lastVersion = "v0.47";
+const lastVersion = "current";
 
 /** @type {import('@docusaurus/types').Config} */
 const config = {
@@ -43,16 +44,13 @@ const config = {
           versions: {
             current: {
               path: "main",
-              banner: "unreleased",
+              // banner: "unreleased",
             },
-            "v0.50": {
-              path: "v0.50",
-              label: "v0.50",
-            },
-            "v0.47": {
-              path: "v0.47",
-              label: "v0.47",
-            },
+            // "v0.47": {
+            //   label: "v0.47",
+            //   path: "v0.47",
+            //   banner: "none",
+            // },
           },
         },
         theme: {
@@ -260,6 +258,13 @@ const config = {
           },
           {
             from: [
+              "/main/modules/capability/01_concepts",
+              "/main/modules/capability/02_state",
+            ],
+            to: "/main/modules/capability",
+          },
+          {
+            from: [
               "/main/modules/crisis/01_state",
               "/main/modules/crisis/02_messages",
               "/main/modules/crisis/03_events",
@@ -392,32 +397,12 @@ const config = {
             to: "/main/modules/upgrade/",
           },
           {
-            from: ["/main/modules/capability", "/main/ecosystem"],
-            to: "/main/modules",
-          },
-          {
-            from: ["/main/spec/circuit-breaker"],
-            to: "/main/modules/circuit",
-          },
-          {
-            from: ["/main/spec/reserve-pool"],
-            to: "/main/modules/distribution",
-          },
-          {
             from: ["/main/run-node/cosmovisor"],
             to: "/main/tooling/cosmovisor",
           },
           {
             from: ["/main/migrations/pre-upgrade"],
             to: "/main/building-apps/app-upgrade",
-          },
-          {
-            from: ["/main/tooling/depinject"],
-            to: "/main/packages/depinject",
-          },
-          {
-            from: ["/main/building-modules/autocli"],
-            to: "/main/core/autocli",
           },
         ],
       },

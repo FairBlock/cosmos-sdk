@@ -1,14 +1,12 @@
 package keeper_test
 
 import (
-	"cosmossdk.io/x/upgrade/types"
-
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/types/address"
+	"github.com/cosmos/cosmos-sdk/x/upgrade/types"
 )
 
 func (s *KeeperTestSuite) TestSoftwareUpgrade() {
-	govAccAddr := sdk.AccAddress(address.Module("gov")).String()
+	govAccAddr := "cosmos10d07y265gmmuvt4z0w9aw880jnsr700j6zn9kn" // TODO
+	// govAccAddr := s.govKeeper.GetGovernanceAccount(s.ctx).GetAddress().String()
 
 	testCases := []struct {
 		name      string
@@ -16,18 +14,6 @@ func (s *KeeperTestSuite) TestSoftwareUpgrade() {
 		expectErr bool
 		errMsg    string
 	}{
-		{
-			"invalid authority address",
-			&types.MsgSoftwareUpgrade{
-				Authority: "authority",
-				Plan: types.Plan{
-					Name:   "all-good",
-					Height: 123450000,
-				},
-			},
-			true,
-			"expected authority account as only signer for proposal message",
-		},
 		{
 			"unauthorized authority address",
 			&types.MsgSoftwareUpgrade{
@@ -39,7 +25,7 @@ func (s *KeeperTestSuite) TestSoftwareUpgrade() {
 				},
 			},
 			true,
-			"expected authority account as only signer for proposal message",
+			"expected gov account as only signer for proposal message",
 		},
 		{
 			"invalid plan",
@@ -74,8 +60,8 @@ func (s *KeeperTestSuite) TestSoftwareUpgrade() {
 				s.Require().Contains(err.Error(), tc.errMsg)
 			} else {
 				s.Require().NoError(err)
-				plan, err := s.upgradeKeeper.GetUpgradePlan(s.ctx)
-				s.Require().NoError(err)
+				plan, found := s.upgradeKeeper.GetUpgradePlan(s.ctx)
+				s.Require().Equal(true, found)
 				s.Require().Equal(tc.req.Plan, plan)
 			}
 		})
@@ -99,23 +85,15 @@ func (s *KeeperTestSuite) TestCancelUpgrade() {
 		errMsg    string
 	}{
 		{
-			"invalid authority address",
-			&types.MsgCancelUpgrade{
-				Authority: "authority",
-			},
-			true,
-			"expected authority account as only signer for proposal message",
-		},
-		{
 			"unauthorized authority address",
 			&types.MsgCancelUpgrade{
 				Authority: s.addrs[0].String(),
 			},
 			true,
-			"expected authority account as only signer for proposal message",
+			"expected gov account as only signer for proposal message",
 		},
 		{
-			"upgrade canceled successfully",
+			"upgrade cancelled successfully",
 			&types.MsgCancelUpgrade{
 				Authority: govAccAddr,
 			},
@@ -131,8 +109,8 @@ func (s *KeeperTestSuite) TestCancelUpgrade() {
 				s.Require().Contains(err.Error(), tc.errMsg)
 			} else {
 				s.Require().NoError(err)
-				_, err := s.upgradeKeeper.GetUpgradePlan(s.ctx)
-				s.Require().ErrorIs(err, types.ErrNoUpgradePlanFound)
+				_, found := s.upgradeKeeper.GetUpgradePlan(s.ctx)
+				s.Require().Equal(false, found)
 			}
 		})
 	}

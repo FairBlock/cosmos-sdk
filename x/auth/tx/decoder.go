@@ -5,8 +5,6 @@ import (
 
 	"google.golang.org/protobuf/encoding/protowire"
 
-	errorsmod "cosmossdk.io/errors"
-
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/codec/unknownproto"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -20,7 +18,7 @@ func DefaultTxDecoder(cdc codec.ProtoCodecMarshaler) sdk.TxDecoder {
 		// Make sure txBytes follow ADR-027.
 		err := rejectNonADR027TxRaw(txBytes)
 		if err != nil {
-			return nil, errorsmod.Wrap(sdkerrors.ErrTxDecode, err.Error())
+			return nil, sdkerrors.Wrap(sdkerrors.ErrTxDecode, err.Error())
 		}
 
 		var raw tx.TxRaw
@@ -28,7 +26,7 @@ func DefaultTxDecoder(cdc codec.ProtoCodecMarshaler) sdk.TxDecoder {
 		// reject all unknown proto fields in the root TxRaw
 		err = unknownproto.RejectUnknownFieldsStrict(txBytes, &raw, cdc.InterfaceRegistry())
 		if err != nil {
-			return nil, errorsmod.Wrap(sdkerrors.ErrTxDecode, err.Error())
+			return nil, sdkerrors.Wrap(sdkerrors.ErrTxDecode, err.Error())
 		}
 
 		err = cdc.Unmarshal(txBytes, &raw)
@@ -41,12 +39,12 @@ func DefaultTxDecoder(cdc codec.ProtoCodecMarshaler) sdk.TxDecoder {
 		// allow non-critical unknown fields in TxBody
 		txBodyHasUnknownNonCriticals, err := unknownproto.RejectUnknownFields(raw.BodyBytes, &body, true, cdc.InterfaceRegistry())
 		if err != nil {
-			return nil, errorsmod.Wrap(sdkerrors.ErrTxDecode, err.Error())
+			return nil, sdkerrors.Wrap(sdkerrors.ErrTxDecode, err.Error())
 		}
 
 		err = cdc.Unmarshal(raw.BodyBytes, &body)
 		if err != nil {
-			return nil, errorsmod.Wrap(sdkerrors.ErrTxDecode, err.Error())
+			return nil, sdkerrors.Wrap(sdkerrors.ErrTxDecode, err.Error())
 		}
 
 		var authInfo tx.AuthInfo
@@ -54,12 +52,12 @@ func DefaultTxDecoder(cdc codec.ProtoCodecMarshaler) sdk.TxDecoder {
 		// reject all unknown proto fields in AuthInfo
 		err = unknownproto.RejectUnknownFieldsStrict(raw.AuthInfoBytes, &authInfo, cdc.InterfaceRegistry())
 		if err != nil {
-			return nil, errorsmod.Wrap(sdkerrors.ErrTxDecode, err.Error())
+			return nil, sdkerrors.Wrap(sdkerrors.ErrTxDecode, err.Error())
 		}
 
 		err = cdc.Unmarshal(raw.AuthInfoBytes, &authInfo)
 		if err != nil {
-			return nil, errorsmod.Wrap(sdkerrors.ErrTxDecode, err.Error())
+			return nil, sdkerrors.Wrap(sdkerrors.ErrTxDecode, err.Error())
 		}
 
 		theTx := &tx.Tx{
@@ -73,7 +71,6 @@ func DefaultTxDecoder(cdc codec.ProtoCodecMarshaler) sdk.TxDecoder {
 			bodyBz:                       raw.BodyBytes,
 			authInfoBz:                   raw.AuthInfoBytes,
 			txBodyHasUnknownNonCriticals: txBodyHasUnknownNonCriticals,
-			cdc:                          cdc,
 		}, nil
 	}
 }
@@ -84,12 +81,11 @@ func DefaultJSONTxDecoder(cdc codec.ProtoCodecMarshaler) sdk.TxDecoder {
 		var theTx tx.Tx
 		err := cdc.UnmarshalJSON(txBytes, &theTx)
 		if err != nil {
-			return nil, errorsmod.Wrap(sdkerrors.ErrTxDecode, err.Error())
+			return nil, sdkerrors.Wrap(sdkerrors.ErrTxDecode, err.Error())
 		}
 
 		return &wrapper{
-			tx:  &theTx,
-			cdc: cdc,
+			tx: &theTx,
 		}, nil
 	}
 }

@@ -7,6 +7,7 @@ import (
 
 	"github.com/cosmos/gogoproto/jsonpb"
 	"github.com/cosmos/gogoproto/proto"
+
 	amino "github.com/tendermint/go-amino"
 )
 

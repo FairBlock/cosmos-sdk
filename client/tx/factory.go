@@ -6,11 +6,10 @@ import (
 	"os"
 	"strings"
 
-	"github.com/cosmos/go-bip39"
-	"github.com/spf13/pflag"
-	"github.com/spf13/viper"
-
 	"cosmossdk.io/math"
+	"github.com/spf13/pflag"
+
+	"github.com/cosmos/go-bip39"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
@@ -51,14 +50,6 @@ type Factory struct {
 
 // NewFactoryCLI creates a new Factory.
 func NewFactoryCLI(clientCtx client.Context, flagSet *pflag.FlagSet) (Factory, error) {
-	if clientCtx.Viper == nil {
-		clientCtx.Viper = viper.New()
-	}
-
-	if err := clientCtx.Viper.BindPFlags(flagSet); err != nil {
-		return Factory{}, fmt.Errorf("failed to bind flags to viper: %w", err)
-	}
-
 	signModeStr := clientCtx.SignModeStr
 
 	signMode := signing.SignMode_SIGN_MODE_UNSPECIFIED
@@ -69,8 +60,6 @@ func NewFactoryCLI(clientCtx client.Context, flagSet *pflag.FlagSet) (Factory, e
 		signMode = signing.SignMode_SIGN_MODE_LEGACY_AMINO_JSON
 	case flags.SignModeDirectAux:
 		signMode = signing.SignMode_SIGN_MODE_DIRECT_AUX
-	case flags.SignModeTextual:
-		signMode = signing.SignMode_SIGN_MODE_TEXTUAL
 	case flags.SignModeEIP191:
 		signMode = signing.SignMode_SIGN_MODE_EIP_191
 	}
@@ -78,18 +67,18 @@ func NewFactoryCLI(clientCtx client.Context, flagSet *pflag.FlagSet) (Factory, e
 	var accNum, accSeq uint64
 	if clientCtx.Offline {
 		if flagSet.Changed(flags.FlagAccountNumber) && flagSet.Changed(flags.FlagSequence) {
-			accNum = clientCtx.Viper.GetUint64(flags.FlagAccountNumber)
-			accSeq = clientCtx.Viper.GetUint64(flags.FlagSequence)
+			accNum, _ = flagSet.GetUint64(flags.FlagAccountNumber)
+			accSeq, _ = flagSet.GetUint64(flags.FlagSequence)
 		} else {
 			return Factory{}, errors.New("account-number and sequence must be set in offline mode")
 		}
 	}
 
-	gasAdj := clientCtx.Viper.GetFloat64(flags.FlagGasAdjustment)
-	memo := clientCtx.Viper.GetString(flags.FlagNote)
-	timeoutHeight := clientCtx.Viper.GetUint64(flags.FlagTimeoutHeight)
+	gasAdj, _ := flagSet.GetFloat64(flags.FlagGasAdjustment)
+	memo, _ := flagSet.GetString(flags.FlagNote)
+	timeoutHeight, _ := flagSet.GetUint64(flags.FlagTimeoutHeight)
 
-	gasStr := clientCtx.Viper.GetString(flags.FlagGas)
+	gasStr, _ := flagSet.GetString(flags.FlagGas)
 	gasSetting, _ := flags.ParseGasSetting(gasStr)
 
 	f := Factory{
@@ -111,15 +100,15 @@ func NewFactoryCLI(clientCtx client.Context, flagSet *pflag.FlagSet) (Factory, e
 		feePayer:           clientCtx.FeePayer,
 	}
 
-	feesStr := clientCtx.Viper.GetString(flags.FlagFees)
+	feesStr, _ := flagSet.GetString(flags.FlagFees)
 	f = f.WithFees(feesStr)
 
-	tipsStr := clientCtx.Viper.GetString(flags.FlagTip)
+	tipsStr, _ := flagSet.GetString(flags.FlagTip)
 	// Add tips to factory. The tipper is necessarily the Msg signer, i.e.
 	// the from address.
 	f = f.WithTips(tipsStr, clientCtx.FromAddress.String())
 
-	gasPricesStr := clientCtx.Viper.GetString(flags.FlagGasPrices)
+	gasPricesStr, _ := flagSet.GetString(flags.FlagGasPrices)
 	f = f.WithGasPrices(gasPricesStr)
 
 	f = f.WithPreprocessTxHook(clientCtx.PreprocessTxHook)
@@ -179,7 +168,7 @@ func (f Factory) WithFees(fees string) Factory {
 }
 
 // WithTips returns a copy of the Factory with an updated tip.
-func (f Factory) WithTips(tip, tipper string) Factory {
+func (f Factory) WithTips(tip string, tipper string) Factory {
 	parsedTips, err := sdk.ParseCoinsNormalized(tip)
 	if err != nil {
 		panic(err)
@@ -296,7 +285,7 @@ func (f Factory) PreprocessTx(keyname string, builder client.TxBuilder) error {
 // Example to add dynamic fee extension options:
 //
 //	extOpt := ethermint.ExtensionOptionDynamicFeeTx{
-//		MaxPriorityPrice: math.NewInt(1000000),
+//		MaxPriorityPrice: sdk.NewInt(1000000),
 //	}
 //
 //	extBytes, _ := extOpt.Marshal()

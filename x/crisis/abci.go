@@ -1,7 +1,6 @@
 package crisis
 
 import (
-	"context"
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/telemetry"
@@ -11,13 +10,12 @@ import (
 )
 
 // check all registered invariants
-func EndBlocker(ctx context.Context, k keeper.Keeper) {
+func EndBlocker(ctx sdk.Context, k keeper.Keeper) {
 	defer telemetry.ModuleMeasureSince(types.ModuleName, time.Now(), telemetry.MetricKeyEndBlocker)
 
-	sdkCtx := sdk.UnwrapSDKContext(ctx)
-	if k.InvCheckPeriod() == 0 || sdkCtx.BlockHeight()%int64(k.InvCheckPeriod()) != 0 {
+	if k.InvCheckPeriod() == 0 || ctx.BlockHeight()%int64(k.InvCheckPeriod()) != 0 {
 		// skip running the invariant check
 		return
 	}
-	k.AssertInvariants(sdkCtx)
+	k.AssertInvariants(ctx)
 }

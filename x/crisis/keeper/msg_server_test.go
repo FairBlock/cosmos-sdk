@@ -6,12 +6,6 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/suite"
 
-	sdkmath "cosmossdk.io/math"
-	storetypes "cosmossdk.io/store/types"
-
-	addresscodec "github.com/cosmos/cosmos-sdk/codec/address"
-	"github.com/cosmos/cosmos-sdk/crypto/keyring"
-	"github.com/cosmos/cosmos-sdk/runtime"
 	"github.com/cosmos/cosmos-sdk/testutil"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	moduletestutil "github.com/cosmos/cosmos-sdk/types/module/testutil"
@@ -24,9 +18,9 @@ import (
 type KeeperTestSuite struct {
 	suite.Suite
 
-	ctx          sdk.Context
-	supplyKeeper *crisistestutil.MockSupplyKeeper
-	keeper       *keeper.Keeper
+	ctx        sdk.Context
+	authKeeper *crisistestutil.MockSupplyKeeper
+	keeper     *keeper.Keeper
 }
 
 func (s *KeeperTestSuite) SetupTest() {
@@ -34,30 +28,25 @@ func (s *KeeperTestSuite) SetupTest() {
 	ctrl := gomock.NewController(s.T())
 	supplyKeeper := crisistestutil.NewMockSupplyKeeper(ctrl)
 
-	key := storetypes.NewKVStoreKey(types.StoreKey)
-	storeService := runtime.NewKVStoreService(key)
-	testCtx := testutil.DefaultContextWithDB(s.T(), key, storetypes.NewTransientStoreKey("transient_test"))
+	key := sdk.NewKVStoreKey(types.StoreKey)
+	testCtx := testutil.DefaultContextWithDB(s.T(), key, sdk.NewTransientStoreKey("transient_test"))
 	encCfg := moduletestutil.MakeTestEncodingConfig(crisis.AppModuleBasic{})
-	keeper := keeper.NewKeeper(encCfg.Codec, storeService, 5, supplyKeeper, "", sdk.AccAddress([]byte("addr1_______________")).String(), addresscodec.NewBech32Codec("cosmos"))
+	keeper := keeper.NewKeeper(encCfg.Codec, key, 5, supplyKeeper, "", "")
 
 	s.ctx = testCtx.Ctx
 	s.keeper = keeper
-	s.supplyKeeper = supplyKeeper
+	s.authKeeper = supplyKeeper
 }
 
 func (s *KeeperTestSuite) TestMsgVerifyInvariant() {
 	// default params
-	constantFee := sdk.NewCoin(sdk.DefaultBondDenom, sdkmath.NewInt(1000))
-	err := s.keeper.ConstantFee.Set(s.ctx, constantFee)
+	constantFee := sdk.NewCoin(sdk.DefaultBondDenom, sdk.NewInt(1000))
+	err := s.keeper.SetConstantFee(s.ctx, constantFee)
 	s.Require().NoError(err)
 
-	encCfg := moduletestutil.MakeTestEncodingConfig(crisis.AppModuleBasic{})
-	kr := keyring.NewInMemory(encCfg.Codec)
-	testutil.CreateKeyringAccounts(s.T(), kr, 1)
+	sender := sdk.AccAddress([]byte("addr1_______________"))
 
-	sender := testutil.CreateKeyringAccounts(s.T(), kr, 1)[0]
-
-	s.supplyKeeper.EXPECT().SendCoinsFromAccountToModule(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(2)
+	s.authKeeper.EXPECT().SendCoinsFromAccountToModule(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(2)
 	s.keeper.RegisterRoute("bank", "total-supply", func(sdk.Context) (string, bool) { return "", false })
 
 	testCases := []struct {
@@ -89,7 +78,7 @@ func (s *KeeperTestSuite) TestMsgVerifyInvariant() {
 		{
 			name: "unregistered invariant route",
 			input: &types.MsgVerifyInvariant{
-				Sender:              sender.Address.String(),
+				Sender:              sender.String(),
 				InvariantModuleName: "module",
 				InvariantRoute:      "invalidroute",
 			},
@@ -99,7 +88,7 @@ func (s *KeeperTestSuite) TestMsgVerifyInvariant() {
 		{
 			name: "valid invariant",
 			input: &types.MsgVerifyInvariant{
-				Sender:              sender.Address.String(),
+				Sender:              sender.String(),
 				InvariantModuleName: "bank",
 				InvariantRoute:      "total-supply",
 			},
@@ -123,7 +112,7 @@ func (s *KeeperTestSuite) TestMsgVerifyInvariant() {
 
 func (s *KeeperTestSuite) TestMsgUpdateParams() {
 	// default params
-	constantFee := sdk.NewCoin(sdk.DefaultBondDenom, sdkmath.NewInt(1000))
+	constantFee := sdk.NewCoin(sdk.DefaultBondDenom, sdk.NewInt(1000))
 
 	testCases := []struct {
 		name      string
@@ -152,7 +141,7 @@ func (s *KeeperTestSuite) TestMsgUpdateParams() {
 			name: "negative constant fee",
 			input: &types.MsgUpdateParams{
 				Authority:   s.keeper.GetAuthority(),
-				ConstantFee: sdk.Coin{Denom: sdk.DefaultBondDenom, Amount: sdkmath.NewInt(-1000)},
+				ConstantFee: sdk.Coin{Denom: sdk.DefaultBondDenom, Amount: sdk.NewInt(-1000)},
 			},
 			expErr: true,
 		},

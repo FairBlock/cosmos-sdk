@@ -8,7 +8,9 @@ sidebar_position: 1
 `Msg`s and `Queries` are the two primary objects handled by modules. Most of the core components defined in a module, like `Msg` services, `keeper`s and `Query` services, exist to process `message`s and `queries`.
 :::
 
-:::note Pre-requisite Readings
+:::note
+
+### Pre-requisite Readings
 
 * [Introduction to Cosmos SDK Modules](./01-intro.md)
 
@@ -27,7 +29,7 @@ Defining Protobuf `Msg` services is the recommended way to handle messages. A Pr
 See an example of a `Msg` service definition from `x/bank` module:
 
 ```protobuf reference
-https://github.com/cosmos/cosmos-sdk/blob/v0.50.0-alpha.0/proto/cosmos/bank/v1beta1/tx.proto#L13-L36
+https://github.com/cosmos/cosmos-sdk/blob/v0.47.0-rc1/proto/cosmos/bank/v1beta1/tx.proto#L13-L36
 ```
 
 Each `Msg` service method must have exactly one argument, which must implement the `sdk.Msg` interface, and a Protobuf response. The naming convention is to call the RPC argument `Msg<service-rpc-name>` and the RPC response `Msg<service-rpc-name>Response`. For example:
@@ -36,7 +38,7 @@ Each `Msg` service method must have exactly one argument, which must implement t
   rpc Send(MsgSend) returns (MsgSendResponse);
 ```
 
-`sdk.Msg` interface is a simplified version of the Amino `LegacyMsg` interface described [below](#legacy-amino-msgs) with the `GetSigners()` method. For backwards compatibility with [Amino `LegacyMsg`s](#legacy-amino-msgs), existing `LegacyMsg` types should be used as the request parameter for `service` RPC definitions. Newer `sdk.Msg` types, which only support `service` definitions, should use canonical `Msg...` name.
+`sdk.Msg` interface is a simplified version of the Amino `LegacyMsg` interface described [below](#legacy-amino-msgs) with only `ValidateBasic()` and `GetSigners()` methods. For backwards compatibility with [Amino `LegacyMsg`s](#legacy-amino-msgs), existing `LegacyMsg` types should be used as the request parameter for `service` RPC definitions. Newer `sdk.Msg` types, which only support `service` definitions, should use canonical `Msg...` name.
 
 The Cosmos SDK uses Protobuf definitions to generate client and server code:
 
@@ -56,21 +58,25 @@ Amino `LegacyMsg`s can be defined as protobuf messages. The messages definition 
 A `LegacyMsg` is typically accompanied by a standard constructor function, that is called from one of the [module's interface](./09-module-interfaces.md). `message`s also need to implement the `sdk.Msg` interface:
 
 ```go reference
-https://github.com/cosmos/cosmos-sdk/blob/v0.50.0-alpha.0/types/tx_msg.go#L21-L28
+https://github.com/cosmos/cosmos-sdk/blob/v0.47.0-rc1/types/tx_msg.go#L14-L26
 ```
 
 It extends `proto.Message` and contains the following methods:
 
+* `Route() string`: Name of the route for this message. Typically all `message`s in a module have the same route, which is most often the module's name.
+* `Type() string`: Type of the message, used primarily in [events](../core/08-events.md). This should return a message-specific `string`, typically the denomination of the message itself.
+* [`ValidateBasic() error`](../basics/01-tx-lifecycle.md#ValidateBasic).
 * `GetSignBytes() []byte`: Return the canonical byte representation of the message. Used to generate a signature.
+* `GetSigners() []AccAddress`: Return the list of signers. The Cosmos SDK will make sure that each `message` contained in a transaction is signed by all the signers listed in the list returned by this method.
 
 ```go reference
-https://github.com/cosmos/cosmos-sdk/blob/v0.50.0-alpha.0/x/auth/migrations/legacytx/stdsign.go#L21-L29
+https://github.com/cosmos/cosmos-sdk/blob/v0.47.0-rc1/x/auth/migrations/legacytx/stdsign.go#L20-L36
 ```
 
 See an example implementation of a `message` from the `gov` module:
 
 ```go reference
-https://github.com/cosmos/cosmos-sdk/blob/v0.50.0-alpha.0/x/gov/types/v1/msgs.go#L103-L150
+https://github.com/cosmos/cosmos-sdk/blob/v0.47.0-rc1/x/gov/types/v1/msgs.go#L121-L153
 ```
 
 ## Queries
@@ -84,7 +90,7 @@ Queries should be defined using [Protobuf services](https://developers.google.co
 Here's an example of such a `Query` service definition:
 
 ```protobuf reference
-https://github.com/cosmos/cosmos-sdk/blob/v0.50.0-alpha.0/proto/cosmos/auth/v1beta1/query.proto#L14-L89
+https://github.com/cosmos/cosmos-sdk/blob/v0.47.0-rc1/proto/cosmos/auth/v1beta1/query.proto#L14-L89
 ```
 
 As `proto.Message`s, generated `Response` types implement by default `String()` method of [`fmt.Stringer`](https://pkg.go.dev/fmt#Stringer).
@@ -119,5 +125,5 @@ Store queries query directly for store keys. They use `clientCtx.QueryABCI(req a
 See following examples:
 
 ```go reference
-https://github.com/cosmos/cosmos-sdk/blob/v0.50.0-alpha.0/baseapp/abci.go#L864-L894
+https://github.com/cosmos/cosmos-sdk/blob/v0.47.0-rc1/baseapp/abci.go#L881-L902
 ```

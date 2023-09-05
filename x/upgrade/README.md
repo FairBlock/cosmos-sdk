@@ -22,9 +22,9 @@ recover from.
 * [State](#state)
 * [Events](#events)
 * [Client](#client)
-  * [CLI](#cli)
-  * [REST](#rest)
-  * [gRPC](#grpc)
+    * [CLI](#cli)
+    * [REST](#rest)
+    * [gRPC](#grpc)
 * [Resources](#resources)
 
 ## Concepts
@@ -41,6 +41,12 @@ may contain various metadata about the upgrade, typically application specific
 upgrade info to be included on-chain such as a git commit that validators could
 automatically upgrade to.
 
+#### Sidecar Process
+
+If an operator running the application binary also runs a sidecar process to assist
+in the automatic download and upgrade of a binary, the `Info` allows this process to
+be seamless. This tool is [Cosmovisor](https://github.com/cosmos/cosmos-sdk/tree/main/tools/cosmovisor#readme).
+
 ```go
 type Plan struct {
   Name   string
@@ -48,12 +54,6 @@ type Plan struct {
   Info   string
 }
 ```
-
-#### Sidecar Process
-
-If an operator running the application binary also runs a sidecar process to assist
-in the automatic download and upgrade of a binary, the `Info` allows this process to
-be seamless. This tool is [Cosmovisor](https://github.com/cosmos/cosmos-sdk/tree/main/tools/cosmovisor#readme).
 
 ### Handler
 
@@ -246,6 +246,8 @@ module_versions:
   version: "1"
 - name: bank
   version: "2"
+- name: capability
+  version: "1"
 - name: crisis
   version: "1"
 - name: distribution
@@ -312,23 +314,6 @@ info: ""
 name: test-upgrade
 time: "0001-01-01T00:00:00Z"
 upgraded_client_state: null
-```
-
-#### Transactions
-
-The upgrade module supports the following transactions:
-
-* `software-proposal` - submits an upgrade proposal:
-
-```bash
-simd tx upgrade software-upgrade v2 --title="Test Proposal" --summary="testing" --deposit="100000000stake" --upgrade-height 1000000 \
---upgrade-info '{ "binaries": { "linux/amd64":"https://example.com/simd.zip?checksum=sha256:aec070645fe53ee3b3763059376134f058cc337247c978add178b6ccdfb0019f" } }' --from cosmos1..
-```
-
-* `cancel-software-upgrade` - cancels a previously submitted upgrade proposal:
-
-```bash
-simd tx upgrade cancel-software-upgrade --title="Test Proposal" --summary="testing" --deposit="100000000stake" --from cosmos1..
 ```
 
 ### REST
@@ -409,6 +394,10 @@ Example Output:
     {
       "name": "bank",
       "version": "2"
+    },
+    {
+      "name": "capability",
+      "version": "1"
     },
     {
       "name": "crisis",
@@ -551,6 +540,10 @@ Example Output:
     {
       "name": "bank",
       "version": "2"
+    },
+    {
+      "name": "capability",
+      "version": "1"
     },
     {
       "name": "crisis",

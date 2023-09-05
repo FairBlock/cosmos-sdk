@@ -3,9 +3,8 @@ package keeper
 import (
 	"sort"
 
-	"cosmossdk.io/x/nft"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/x/nft"
 )
 
 // InitGenesis initializes the nft module's genesis state from a given
@@ -18,10 +17,7 @@ func (k Keeper) InitGenesis(ctx sdk.Context, data *nft.GenesisState) {
 	}
 	for _, entry := range data.Entries {
 		for _, nft := range entry.Nfts {
-			owner, err := k.ac.StringToBytes(entry.Owner)
-			if err != nil {
-				panic(err)
-			}
+			owner := sdk.MustAccAddressFromBech32(entry.Owner)
 
 			if err := k.Mint(ctx, *nft, owner); err != nil {
 				panic(err)

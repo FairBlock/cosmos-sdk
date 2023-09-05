@@ -68,7 +68,7 @@ func GetAuxToFeeCommand() *cobra.Command {
 				return err
 			}
 
-			// broadcast to a CometBFT node
+			// broadcast to a Tendermint node
 			res, err := clientCtx.BroadcastTx(txBytes)
 			if err != nil {
 				return err

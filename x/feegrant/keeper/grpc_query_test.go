@@ -1,14 +1,8 @@
 package keeper_test
 
 import (
-	"cosmossdk.io/x/feegrant"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
-)
-
-const (
-	invalidGrantee = "invalid-grantee"
-	invalidGranter = "invalid-granter"
+	"github.com/cosmos/cosmos-sdk/x/feegrant"
 )
 
 func (suite *KeeperTestSuite) TestFeeAllowance() {
@@ -29,7 +23,7 @@ func (suite *KeeperTestSuite) TestFeeAllowance() {
 		{
 			"fail: invalid granter",
 			&feegrant.QueryAllowanceRequest{
-				Granter: invalidGranter,
+				Granter: "invalid_granter",
 				Grantee: suite.addrs[0].String(),
 			},
 			true,
@@ -40,7 +34,7 @@ func (suite *KeeperTestSuite) TestFeeAllowance() {
 			"fail: invalid grantee",
 			&feegrant.QueryAllowanceRequest{
 				Granter: suite.addrs[0].String(),
-				Grantee: invalidGrantee,
+				Grantee: "invalid_grantee",
 			},
 			true,
 			func() {},
@@ -51,16 +45,6 @@ func (suite *KeeperTestSuite) TestFeeAllowance() {
 			&feegrant.QueryAllowanceRequest{
 				Granter: suite.addrs[0].String(),
 				Grantee: suite.addrs[1].String(),
-			},
-			true,
-			func() {},
-			func(*feegrant.QueryAllowanceResponse) {},
-		},
-		{
-			"non existed grant",
-			&feegrant.QueryAllowanceRequest{
-				Granter: invalidGranter,
-				Grantee: invalidGrantee,
 			},
 			true,
 			func() {},
@@ -115,7 +99,7 @@ func (suite *KeeperTestSuite) TestFeeAllowances() {
 		{
 			"fail: invalid grantee",
 			&feegrant.QueryAllowancesRequest{
-				Grantee: invalidGrantee,
+				Grantee: "invalid_grantee",
 			},
 			true,
 			func() {},
@@ -181,7 +165,7 @@ func (suite *KeeperTestSuite) TestFeeAllowancesByGranter() {
 		{
 			"fail: invalid grantee",
 			&feegrant.QueryAllowancesByGranterRequest{
-				Granter: invalidGrantee,
+				Granter: "invalid_grantee",
 			},
 			true,
 			func() {},

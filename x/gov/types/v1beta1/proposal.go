@@ -6,8 +6,7 @@ import (
 	"time"
 
 	"github.com/cosmos/gogoproto/proto"
-
-	errorsmod "cosmossdk.io/errors"
+	"sigs.k8s.io/yaml"
 
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -41,6 +40,12 @@ func NewProposal(content Content, id uint64, submitTime, depositEndTime time.Tim
 	}
 
 	return p, nil
+}
+
+// String implements stringer interface
+func (p Proposal) String() string {
+	out, _ := yaml.Marshal(p)
+	return string(out)
 }
 
 // GetContent returns the proposal Content
@@ -179,6 +184,12 @@ func (tp *TextProposal) ProposalType() string { return ProposalTypeText }
 // ValidateBasic validates the content's title and description of the proposal
 func (tp *TextProposal) ValidateBasic() error { return ValidateAbstract(tp) }
 
+// String implements Stringer interface
+func (tp TextProposal) String() string {
+	out, _ := yaml.Marshal(tp)
+	return string(out)
+}
+
 // ValidProposalStatus checks if the proposal status is valid
 func ValidProposalStatus(status ProposalStatus) bool {
 	if status == StatusDepositPeriod ||
@@ -196,18 +207,18 @@ func ValidProposalStatus(status ProposalStatus) bool {
 func ValidateAbstract(c Content) error {
 	title := c.GetTitle()
 	if len(strings.TrimSpace(title)) == 0 {
-		return errorsmod.Wrap(types.ErrInvalidProposalContent, "proposal title cannot be blank")
+		return sdkerrors.Wrap(types.ErrInvalidProposalContent, "proposal title cannot be blank")
 	}
 	if len(title) > MaxTitleLength {
-		return errorsmod.Wrapf(types.ErrInvalidProposalContent, "proposal title is longer than max length of %d", MaxTitleLength)
+		return sdkerrors.Wrapf(types.ErrInvalidProposalContent, "proposal title is longer than max length of %d", MaxTitleLength)
 	}
 
 	description := c.GetDescription()
 	if len(description) == 0 {
-		return errorsmod.Wrap(types.ErrInvalidProposalContent, "proposal description cannot be blank")
+		return sdkerrors.Wrap(types.ErrInvalidProposalContent, "proposal description cannot be blank")
 	}
 	if len(description) > MaxDescriptionLength {
-		return errorsmod.Wrapf(types.ErrInvalidProposalContent, "proposal description is longer than max length of %d", MaxDescriptionLength)
+		return sdkerrors.Wrapf(types.ErrInvalidProposalContent, "proposal description is longer than max length of %d", MaxDescriptionLength)
 	}
 
 	return nil
@@ -256,6 +267,6 @@ func ProposalHandler(_ sdk.Context, c Content) error {
 		return nil
 
 	default:
-		return errorsmod.Wrapf(sdkerrors.ErrUnknownRequest, "unrecognized gov proposal type: %s", c.ProposalType())
+		return sdkerrors.Wrapf(sdkerrors.ErrUnknownRequest, "unrecognized gov proposal type: %s", c.ProposalType())
 	}
 }

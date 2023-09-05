@@ -27,6 +27,7 @@ func NewBaseAccountWithPubKey(pubkey cryptotypes.PubKey) (*BaseAccount, error) {
 	return baseAccount, nil
 }
 
+//nolint:gosec // this isn't an hardcoded credential
 const ModuleCredentialType = "ModuleCredential"
 
 var _ cryptotypes.PubKey = &ModuleCredential{}
@@ -54,7 +55,7 @@ func (m *ModuleCredential) Bytes() []byte {
 }
 
 // VerifySignature returns always false, making the account unclaimable
-func (m *ModuleCredential) VerifySignature(_, _ []byte) bool {
+func (m *ModuleCredential) VerifySignature(_ []byte, _ []byte) bool {
 	return false
 }
 

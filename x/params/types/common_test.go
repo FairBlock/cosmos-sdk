@@ -5,8 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	storetypes "cosmossdk.io/store/types"
-
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/params/types"
 )
 
@@ -16,8 +15,8 @@ var (
 	keyBondDenom              = []byte("BondDenom")
 	keyMaxRedelegationEntries = []byte("MaxRedelegationEntries")
 
-	key  = storetypes.NewKVStoreKey("storekey")
-	tkey = storetypes.NewTransientStoreKey("transientstorekey")
+	key  = sdk.NewKVStoreKey("storekey")
+	tkey = sdk.NewTransientStoreKey("transientstorekey")
 )
 
 type params struct {

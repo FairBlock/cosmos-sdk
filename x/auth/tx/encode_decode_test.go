@@ -12,7 +12,10 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/cosmos/cosmos-sdk/testutil/testdata"
+	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/cosmos/cosmos-sdk/types/tx"
+	signingtypes "github.com/cosmos/cosmos-sdk/types/tx/signing"
+	"github.com/cosmos/cosmos-sdk/x/auth/signing"
 )
 
 func TestDefaultTxDecoderError(t *testing.T) {
@@ -42,10 +45,11 @@ func TestUnknownFields(t *testing.T) {
 	decoder := DefaultTxDecoder(cdc)
 
 	tests := []struct {
-		name      string
-		body      *testdata.TestUpdatedTxBody
-		authInfo  *testdata.TestUpdatedAuthInfo
-		shouldErr bool
+		name           string
+		body           *testdata.TestUpdatedTxBody
+		authInfo       *testdata.TestUpdatedAuthInfo
+		shouldErr      bool
+		shouldAminoErr string
 	}{
 		{
 			name: "no new fields should pass",
@@ -61,8 +65,9 @@ func TestUnknownFields(t *testing.T) {
 				Memo:                         "foo",
 				SomeNewFieldNonCriticalField: "blah",
 			},
-			authInfo:  &testdata.TestUpdatedAuthInfo{},
-			shouldErr: false,
+			authInfo:       &testdata.TestUpdatedAuthInfo{},
+			shouldErr:      false,
+			shouldAminoErr: fmt.Sprintf("%s: %s", aminoNonCriticalFieldsError, sdkerrors.ErrInvalidRequest.Error()),
 		},
 		{
 			name: "critical fields in TxBody should error on decode",
@@ -117,6 +122,15 @@ func TestUnknownFields(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 			}
+
+			if tt.shouldAminoErr != "" {
+				handler := signModeLegacyAminoJSONHandler{}
+				decoder := DefaultTxDecoder(codec.NewProtoCodec(codectypes.NewInterfaceRegistry()))
+				theTx, err := decoder(txBz)
+				require.NoError(t, err)
+				_, err = handler.GetSignBytes(signingtypes.SignMode_SIGN_MODE_LEGACY_AMINO_JSON, signing.SignerData{}, theTx)
+				require.EqualError(t, err, tt.shouldAminoErr)
+			}
 		})
 	}
 
@@ -157,7 +171,6 @@ func TestRejectNonADR027(t *testing.T) {
 	require.NoError(t, err)
 	authInfo := &testdata.TestUpdatedAuthInfo{Fee: &tx.Fee{GasLimit: 127}} // Look for "127" when debugging the bytes stream.
 	authInfoBz, err := authInfo.Marshal()
-	require.NoError(t, err)
 	txRaw := &tx.TxRaw{
 		BodyBytes:     bodyBz,
 		AuthInfoBytes: authInfoBz,

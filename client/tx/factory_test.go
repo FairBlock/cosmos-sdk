@@ -3,10 +3,9 @@ package tx_test
 import (
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/tx"
+	"github.com/stretchr/testify/require"
 )
 
 func TestFactoryPrepate(t *testing.T) {

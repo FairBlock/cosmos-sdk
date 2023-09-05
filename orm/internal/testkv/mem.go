@@ -1,9 +1,9 @@
 package testkv
 
 import (
-	dbm "github.com/cosmos/cosmos-db"
+	dbm "github.com/cometbft/cometbft-db"
 
-	"cosmossdk.io/orm/model/ormtable"
+	"github.com/cosmos/cosmos-sdk/orm/model/ormtable"
 )
 
 // NewSplitMemBackend returns a Backend instance

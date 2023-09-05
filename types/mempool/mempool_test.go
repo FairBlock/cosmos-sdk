@@ -5,11 +5,10 @@ import (
 	"math/rand"
 	"testing"
 
+	"github.com/cometbft/cometbft/libs/log"
+	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-	protov2 "google.golang.org/protobuf/proto"
-
-	"cosmossdk.io/log"
 
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -37,7 +36,7 @@ func (t testPubKey) Address() cryptotypes.Address { return t.address.Bytes() }
 
 func (t testPubKey) Bytes() []byte { panic("not implemented") }
 
-func (t testPubKey) VerifySignature(msg, sig []byte) bool { panic("not implemented") }
+func (t testPubKey) VerifySignature(msg []byte, sig []byte) bool { panic("not implemented") }
 
 func (t testPubKey) Equals(key cryptotypes.PubKey) bool { panic("not implemented") }
 
@@ -53,7 +52,7 @@ type testTx struct {
 	strAddress string
 }
 
-func (tx testTx) GetSigners() ([][]byte, error) { panic("not implemented") }
+func (tx testTx) GetSigners() []sdk.AccAddress { panic("not implemented") }
 
 func (tx testTx) GetPubKeys() ([]cryptotypes.PubKey, error) { panic("not implemented") }
 
@@ -75,8 +74,6 @@ var (
 
 func (tx testTx) GetMsgs() []sdk.Msg { return nil }
 
-func (tx testTx) GetMsgsV2() ([]protov2.Message, error) { return nil, nil }
-
 func (tx testTx) ValidateBasic() error { return nil }
 
 func (tx testTx) String() string {
@@ -87,17 +84,15 @@ type sigErrTx struct {
 	getSigs func() ([]txsigning.SignatureV2, error)
 }
 
-func (sigErrTx) Size() int64 { return 0 }
+func (_ sigErrTx) Size() int64 { return 0 }
 
-func (sigErrTx) GetMsgs() []sdk.Msg { return nil }
+func (_ sigErrTx) GetMsgs() []sdk.Msg { return nil }
 
-func (sigErrTx) GetMsgsV2() ([]protov2.Message, error) { return nil, nil }
+func (_ sigErrTx) ValidateBasic() error { return nil }
 
-func (sigErrTx) ValidateBasic() error { return nil }
+func (_ sigErrTx) GetSigners() []sdk.AccAddress { return nil }
 
-func (sigErrTx) GetSigners() ([][]byte, error) { return nil, nil }
-
-func (sigErrTx) GetPubKeys() ([]cryptotypes.PubKey, error) { return nil, nil }
+func (_ sigErrTx) GetPubKeys() ([]cryptotypes.PubKey, error) { return nil, nil }
 
 func (t sigErrTx) GetSignaturesV2() ([]txsigning.SignatureV2, error) { return t.getSigs() }
 
@@ -131,7 +126,7 @@ func fetchTxs(iterator mempool.Iterator, maxBytes int64) []sdk.Tx {
 
 func (s *MempoolTestSuite) TestDefaultMempool() {
 	t := s.T()
-	ctx := sdk.NewContext(nil, false, log.NewNopLogger())
+	ctx := sdk.NewContext(nil, tmproto.Header{}, false, log.NewNopLogger())
 	accounts := simtypes.RandomAccounts(rand.New(rand.NewSource(0)), 10)
 	txCount := 1000
 	var txs []testTx
@@ -223,7 +218,7 @@ func TestMempoolTestSuite(t *testing.T) {
 }
 
 func (s *MempoolTestSuite) TestSampleTxs() {
-	ctxt := sdk.NewContext(nil, false, log.NewNopLogger())
+	ctxt := sdk.NewContext(nil, tmproto.Header{}, false, log.NewNopLogger())
 	t := s.T()
 	s.resetMempool()
 	mp := s.mempool

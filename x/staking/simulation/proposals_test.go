@@ -5,9 +5,8 @@ import (
 	"testing"
 	"time"
 
+	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
 	"gotest.tools/v3/assert"
-
-	sdkmath "cosmossdk.io/math"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/address"
@@ -21,7 +20,7 @@ func TestProposalMsgs(t *testing.T) {
 	s := rand.NewSource(1)
 	r := rand.New(s)
 
-	ctx := sdk.NewContext(nil, true, nil)
+	ctx := sdk.NewContext(nil, tmproto.Header{}, true, nil)
 	accounts := simtypes.RandomAccounts(r, 3)
 
 	// execute ProposalMsgs function
@@ -44,5 +43,5 @@ func TestProposalMsgs(t *testing.T) {
 	assert.Equal(t, uint32(300), msgUpdateParams.Params.HistoricalEntries)
 	assert.Equal(t, uint32(539), msgUpdateParams.Params.MaxValidators)
 	assert.Equal(t, 8898194435*time.Second, msgUpdateParams.Params.UnbondingTime)
-	assert.DeepEqual(t, sdkmath.LegacyNewDecWithPrec(579040435581502128, 18), msgUpdateParams.Params.MinCommissionRate)
+	assert.DeepEqual(t, sdk.NewDecWithPrec(579040435581502128, 18), msgUpdateParams.Params.MinCommissionRate)
 }

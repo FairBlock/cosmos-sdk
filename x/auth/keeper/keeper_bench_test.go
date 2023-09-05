@@ -3,30 +3,21 @@ package keeper_test
 import (
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
-	"cosmossdk.io/depinject"
-	"cosmossdk.io/log"
-
+	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
 	simtestutil "github.com/cosmos/cosmos-sdk/testutil/sims"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth/keeper"
 	"github.com/cosmos/cosmos-sdk/x/auth/testutil"
+	"github.com/stretchr/testify/require"
 )
 
 func BenchmarkAccountMapperGetAccountFound(b *testing.B) {
 	b.ReportAllocs()
 	var accountKeeper keeper.AccountKeeper
-	app, err := simtestutil.Setup(
-		depinject.Configs(
-			depinject.Supply(log.NewNopLogger()),
-			testutil.AppConfig,
-		),
-		&accountKeeper,
-	)
+	app, err := simtestutil.Setup(testutil.AppConfig, &accountKeeper)
 	require.NoError(b, err)
 
-	ctx := app.BaseApp.NewContext(false)
+	ctx := app.BaseApp.NewContext(false, tmproto.Header{})
 
 	// assumes b.N < 2**24
 	for i := 0; i < b.N; i++ {
@@ -46,14 +37,10 @@ func BenchmarkAccountMapperGetAccountFound(b *testing.B) {
 func BenchmarkAccountMapperSetAccount(b *testing.B) {
 	b.ReportAllocs()
 	var accountKeeper keeper.AccountKeeper
-	app, err := simtestutil.Setup(
-		depinject.Configs(
-			depinject.Supply(log.NewNopLogger()),
-			testutil.AppConfig,
-		), &accountKeeper)
+	app, err := simtestutil.Setup(testutil.AppConfig, &accountKeeper)
 	require.NoError(b, err)
 
-	ctx := app.BaseApp.NewContext(false)
+	ctx := app.BaseApp.NewContext(false, tmproto.Header{})
 
 	b.ResetTimer()
 

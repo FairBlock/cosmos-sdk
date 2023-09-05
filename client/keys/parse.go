@@ -8,10 +8,10 @@ import (
 	"io"
 	"strings"
 
+	"github.com/cometbft/cometbft/libs/cli"
 	"github.com/spf13/cobra"
 	"sigs.k8s.io/yaml"
 
-	"github.com/cosmos/cosmos-sdk/client/flags"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/bech32"
 )
@@ -79,13 +79,15 @@ func ParseKeyStringCommand() *cobra.Command {
 hexadecimal into bech32 cosmos prefixed format and vice versa.
 `,
 		Args: cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			config, _ := sdk.GetSealedConfig(cmd.Context())
-			return doParseKey(cmd, config, args)
-		},
+		RunE: parseKey,
 	}
 
 	return cmd
+}
+
+func parseKey(cmd *cobra.Command, args []string) error {
+	config, _ := sdk.GetSealedConfig(cmd.Context())
+	return doParseKey(cmd, config, args)
 }
 
 func doParseKey(cmd *cobra.Command, config *sdk.Config, args []string) error {
@@ -96,7 +98,7 @@ func doParseKey(cmd *cobra.Command, config *sdk.Config, args []string) error {
 		return errors.New("couldn't parse empty input")
 	}
 
-	output, _ := cmd.Flags().GetString(flags.FlagOutput)
+	output, _ := cmd.Flags().GetString(cli.OutputFlag)
 	if !(runFromBech32(outstream, addr, output) || runFromHex(config, outstream, addr, output)) {
 		return errors.New("couldn't find valid bech32 nor hex data")
 	}
@@ -135,10 +137,10 @@ func displayParseKeyInfo(w io.Writer, stringer fmt.Stringer, output string) {
 	)
 
 	switch output {
-	case flags.OutputFormatText:
+	case OutputFormatText:
 		out, err = yaml.Marshal(&stringer)
 
-	case flags.OutputFormatJSON:
+	case OutputFormatJSON:
 		out, err = json.Marshal(&stringer)
 	}
 

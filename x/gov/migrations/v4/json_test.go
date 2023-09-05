@@ -4,13 +4,12 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/cosmos/cosmos-sdk/client"
 	moduletestutil "github.com/cosmos/cosmos-sdk/types/module/testutil"
 	"github.com/cosmos/cosmos-sdk/x/gov"
 	v4 "github.com/cosmos/cosmos-sdk/x/gov/migrations/v4"
 	v1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
+	"github.com/stretchr/testify/require"
 )
 
 func TestMigrateJSON(t *testing.T) {
@@ -57,21 +56,12 @@ func TestMigrateJSON(t *testing.T) {
 	// Make sure about:
 	// - Proposals use MsgExecLegacyContent
 	expected := `{
-	"constitution": "",
 	"deposit_params": null,
 	"deposits": [],
 	"params": {
 		"burn_proposal_deposit_prevote": false,
 		"burn_vote_quorum": false,
 		"burn_vote_veto": true,
-		"expedited_min_deposit": [
-			{
-				"amount": "50000000",
-				"denom": "stake"
-			}
-		],
-		"expedited_threshold": "0.667000000000000000",
-		"expedited_voting_period": "86400s",
 		"max_deposit_period": "172800s",
 		"min_deposit": [
 			{
@@ -80,8 +70,6 @@ func TestMigrateJSON(t *testing.T) {
 			}
 		],
 		"min_initial_deposit_ratio": "0.000000000000000000",
-		"proposal_cancel_dest": "",
-		"proposal_cancel_ratio": "0.500000000000000000",
 		"quorum": "0.334000000000000000",
 		"threshold": "0.500000000000000000",
 		"veto_threshold": "0.334000000000000000",

@@ -6,10 +6,8 @@ import (
 
 	"github.com/cometbft/cometbft/rpc/client/mock"
 	coretypes "github.com/cometbft/cometbft/rpc/core/types"
-	cmttypes "github.com/cometbft/cometbft/types"
+	tmtypes "github.com/cometbft/cometbft/types"
 	"github.com/stretchr/testify/require"
-
-	sdkmath "cosmossdk.io/math"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -22,7 +20,7 @@ import (
 type TxSearchMock struct {
 	txConfig client.TxConfig
 	mock.Client
-	txs []cmttypes.Tx
+	txs []tmtypes.Tx
 }
 
 func (mock TxSearchMock) TxSearch(ctx context.Context, query string, prove bool, page, perPage *int, orderBy string) (*coretypes.ResultTxSearch, error) {
@@ -50,7 +48,7 @@ func (mock TxSearchMock) TxSearch(ctx context.Context, query string, prove bool,
 
 func (mock TxSearchMock) Block(ctx context.Context, height *int64) (*coretypes.ResultBlock, error) {
 	// any non nil Block needs to be returned. used to get time value
-	return &coretypes.ResultBlock{Block: &cmttypes.Block{}}, nil
+	return &coretypes.ResultBlock{Block: &tmtypes.Block{}}, nil
 }
 
 func TestGetPaginatedVotes(t *testing.T) {
@@ -69,7 +67,7 @@ func TestGetPaginatedVotes(t *testing.T) {
 	acc1Msgs := []sdk.Msg{
 		v1.NewMsgVote(acc1, 0, v1.OptionYes, ""),
 		v1.NewMsgVote(acc1, 0, v1.OptionYes, ""),
-		v1.NewMsgDeposit(acc1, 0, sdk.NewCoins(sdk.NewCoin("stake", sdkmath.NewInt(10)))), // should be ignored
+		v1.NewMsgDeposit(acc1, 0, sdk.NewCoins(sdk.NewCoin("stake", sdk.NewInt(10)))), // should be ignored
 	}
 	acc2Msgs := []sdk.Msg{
 		v1.NewMsgVote(acc2, 0, v1.OptionYes, ""),
@@ -143,8 +141,8 @@ func TestGetPaginatedVotes(t *testing.T) {
 		tc := tc
 
 		t.Run(tc.description, func(t *testing.T) {
-			marshaled := make([]cmttypes.Tx, len(tc.msgs))
-			cli := TxSearchMock{txs: marshaled, txConfig: encCfg.TxConfig}
+			marshalled := make([]tmtypes.Tx, len(tc.msgs))
+			cli := TxSearchMock{txs: marshalled, txConfig: encCfg.TxConfig}
 			clientCtx := client.Context{}.
 				WithLegacyAmino(encCfg.Amino).
 				WithClient(cli).
@@ -157,7 +155,7 @@ func TestGetPaginatedVotes(t *testing.T) {
 
 				tx, err := clientCtx.TxConfig.TxEncoder()(txBuilder.GetTx())
 				require.NoError(t, err)
-				marshaled[i] = tx
+				marshalled[i] = tx
 			}
 
 			params := v1.NewQueryProposalVotesParams(0, tc.page, tc.limit)

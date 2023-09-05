@@ -3,8 +3,6 @@ package v3
 import (
 	"fmt"
 
-	"cosmossdk.io/math"
-
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
@@ -72,19 +70,19 @@ func ConvertToLegacyProposal(proposal v1.Proposal) (v1beta1.Proposal, error) {
 }
 
 func ConvertToLegacyTallyResult(tally *v1.TallyResult) (v1beta1.TallyResult, error) {
-	yes, ok := math.NewIntFromString(tally.YesCount)
+	yes, ok := types.NewIntFromString(tally.YesCount)
 	if !ok {
 		return v1beta1.TallyResult{}, fmt.Errorf("unable to convert yes tally string (%s) to int", tally.YesCount)
 	}
-	no, ok := math.NewIntFromString(tally.NoCount)
+	no, ok := types.NewIntFromString(tally.NoCount)
 	if !ok {
 		return v1beta1.TallyResult{}, fmt.Errorf("unable to convert no tally string (%s) to int", tally.NoCount)
 	}
-	veto, ok := math.NewIntFromString(tally.NoWithVetoCount)
+	veto, ok := types.NewIntFromString(tally.NoWithVetoCount)
 	if !ok {
 		return v1beta1.TallyResult{}, fmt.Errorf("unable to convert no with veto tally string (%s) to int", tally.NoWithVetoCount)
 	}
-	abstain, ok := math.NewIntFromString(tally.AbstainCount)
+	abstain, ok := types.NewIntFromString(tally.AbstainCount)
 	if !ok {
 		return v1beta1.TallyResult{}, fmt.Errorf("unable to convert abstain tally string (%s) to int", tally.AbstainCount)
 	}
@@ -112,7 +110,7 @@ func ConvertToLegacyVote(vote v1.Vote) (v1beta1.Vote, error) {
 func ConvertToLegacyVoteOptions(voteOptions []*v1.WeightedVoteOption) ([]v1beta1.WeightedVoteOption, error) {
 	options := make([]v1beta1.WeightedVoteOption, len(voteOptions))
 	for i, option := range voteOptions {
-		weight, err := math.LegacyNewDecFromStr(option.Weight)
+		weight, err := types.NewDecFromStr(option.Weight)
 		if err != nil {
 			return options, err
 		}
@@ -163,8 +161,9 @@ func convertToNewVotes(oldVotes v1beta1.Votes) (v1.Votes, error) {
 
 		case oldVote.Option != v1beta1.OptionEmpty:
 			newWVOs = v1.NewNonSplitVoteOption(v1.VoteOption(oldVote.Option))
+
 		default:
-			return nil, fmt.Errorf("vote does not have neither InterfaceRegistryOptions nor Option")
+			return nil, fmt.Errorf("vote does not have neither Options nor Option")
 		}
 
 		newVotes[i] = &v1.Vote{

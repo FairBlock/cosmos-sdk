@@ -21,10 +21,10 @@ message GenesisState {
   // proposals defines all the proposals present at genesis.
   repeated Proposal proposals = 4
       [(gogoproto.castrepeated) = "Proposals", (gogoproto.nullable) = false, (amino.dont_omitempty) = true];
-  // deposit_params defines all the parameters related to deposit.
+  // params defines all the parameters of related to deposit.
   DepositParams deposit_params = 5 [(gogoproto.nullable) = false, (amino.dont_omitempty) = true];
-  // voting_params defines all the parameters related to voting.
+  // params defines all the parameters of related to voting.
   VotingParams voting_params = 6 [(gogoproto.nullable) = false, (amino.dont_omitempty) = true];
-  // tally_params defines all the parameters related to tally.
+  // params defines all the parameters of related to tally.
   TallyParams tally_params = 7 [(gogoproto.nullable) = false, (amino.dont_omitempty) = true];
 }

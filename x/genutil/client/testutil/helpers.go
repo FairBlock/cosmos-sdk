@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	cmtcfg "github.com/cometbft/cometbft/config"
+	tmcfg "github.com/cometbft/cometbft/config"
+	"github.com/cometbft/cometbft/libs/cli"
+	"github.com/cometbft/cometbft/libs/log"
 	"github.com/spf13/viper"
-
-	"cosmossdk.io/log"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -19,14 +19,13 @@ import (
 
 func ExecInitCmd(testMbm module.BasicManager, home string, cdc codec.Codec) error {
 	logger := log.NewNopLogger()
-	cfg, err := CreateDefaultCometConfig(home)
+	cfg, err := CreateDefaultTendermintConfig(home)
 	if err != nil {
 		return err
 	}
 
-	cmd := genutilcli.InitCmd(testMbm)
+	cmd := genutilcli.InitCmd(testMbm, home)
 	serverCtx := server.NewContext(viper.New(), cfg, logger)
-	serverCtx.Config.SetRoot(home)
 	clientCtx := client.Context{}.WithCodec(cdc).WithHomeDir(home)
 
 	_, out := testutil.ApplyMockIO(cmd)
@@ -36,15 +35,15 @@ func ExecInitCmd(testMbm module.BasicManager, home string, cdc codec.Codec) erro
 	ctx = context.WithValue(ctx, client.ClientContextKey, &clientCtx)
 	ctx = context.WithValue(ctx, server.ServerContextKey, serverCtx)
 
-	cmd.SetArgs([]string{"appnode-test"})
+	cmd.SetArgs([]string{"appnode-test", fmt.Sprintf("--%s=%s", cli.HomeFlag, home)})
 
 	return cmd.ExecuteContext(ctx)
 }
 
-func CreateDefaultCometConfig(rootDir string) (*cmtcfg.Config, error) {
-	conf := cmtcfg.DefaultConfig()
+func CreateDefaultTendermintConfig(rootDir string) (*tmcfg.Config, error) {
+	conf := tmcfg.DefaultConfig()
 	conf.SetRoot(rootDir)
-	cmtcfg.EnsureRoot(rootDir)
+	tmcfg.EnsureRoot(rootDir)
 
 	if err := conf.ValidateBasic(); err != nil {
 		return nil, fmt.Errorf("error in config file: %v", err)

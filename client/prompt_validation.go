@@ -28,7 +28,7 @@ func ValidatePromptURL(input string) error {
 }
 
 // ValidatePromptAddress validates that the input is a valid Bech32 address.
-func ValidatePromptAddress(input string) error { // TODO(@julienrbrt) remove and add prompts in AutoCLI
+func ValidatePromptAddress(input string) error {
 	_, err := sdk.AccAddressFromBech32(input)
 	if err == nil {
 		return nil

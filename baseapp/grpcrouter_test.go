@@ -2,15 +2,15 @@ package baseapp_test
 
 import (
 	"context"
+	"os"
 	"sync"
 	"testing"
 
-	dbm "github.com/cosmos/cosmos-db"
+	dbm "github.com/cometbft/cometbft-db"
+	"github.com/cometbft/cometbft/libs/log"
 	"github.com/stretchr/testify/require"
 
 	"cosmossdk.io/depinject"
-	"cosmossdk.io/log"
-
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/cosmos/cosmos-sdk/runtime"
@@ -56,15 +56,10 @@ func TestGRPCQueryRouter(t *testing.T) {
 func TestRegisterQueryServiceTwice(t *testing.T) {
 	// Setup baseapp.
 	var appBuilder *runtime.AppBuilder
-	err := depinject.Inject(
-		depinject.Configs(
-			makeMinimalConfig(),
-			depinject.Supply(log.NewTestLogger(t)),
-		),
-		&appBuilder)
+	err := depinject.Inject(makeMinimalConfig(), &appBuilder)
 	require.NoError(t, err)
 	db := dbm.NewMemDB()
-	app := appBuilder.Build(db, nil)
+	app := appBuilder.Build(log.NewTMLogger(log.NewSyncWriter(os.Stdout)), db, nil)
 
 	// First time registering service shouldn't panic.
 	require.NotPanics(t, func() {
@@ -118,7 +113,6 @@ func TestQueryDataRaces_uniqueConnectionsToSameHandler(t *testing.T) {
 }
 
 func testQueryDataRacesSameHandler(t *testing.T, makeClientConn func(*baseapp.GRPCQueryRouter) *baseapp.QueryServiceTestHelper) {
-	t.Helper()
 	t.Parallel()
 
 	qr := baseapp.NewGRPCQueryRouter()

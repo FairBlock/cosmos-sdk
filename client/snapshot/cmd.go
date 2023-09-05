@@ -1,9 +1,8 @@
 package snapshot
 
 import (
-	"github.com/spf13/cobra"
-
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
+	"github.com/spf13/cobra"
 )
 
 // Cmd returns the snapshots group command

@@ -1,13 +1,12 @@
 package keeper
 
 import (
-	"context"
 	"fmt"
 
-	st "cosmossdk.io/api/cosmos/staking/v1beta1"
-	"cosmossdk.io/x/evidence/types"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
+
+	"github.com/cosmos/cosmos-sdk/x/evidence/types"
+	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 )
 
 // HandleEquivocationEvidence implements an equivocation evidence handler. Assuming the
@@ -24,22 +23,18 @@ import (
 //
 // TODO: Some of the invalid constraints listed above may need to be reconsidered
 // in the case of a lunatic attack.
-func (k Keeper) handleEquivocationEvidence(ctx context.Context, evidence *types.Equivocation) error {
-	sdkCtx := sdk.UnwrapSDKContext(ctx)
+func (k Keeper) HandleEquivocationEvidence(ctx sdk.Context, evidence *types.Equivocation) {
 	logger := k.Logger(ctx)
-	consAddr := evidence.GetConsensusAddress(k.stakingKeeper.ConsensusAddressCodec())
+	consAddr := evidence.GetConsensusAddress()
 
-	validator, err := k.stakingKeeper.ValidatorByConsAddr(ctx, consAddr)
-	if err != nil {
-		return err
-	}
+	validator := k.stakingKeeper.ValidatorByConsAddr(ctx, consAddr)
 	if validator == nil || validator.IsUnbonded() {
 		// Defensive: Simulation doesn't take unbonding periods into account, and
 		// CometBFT might break this assumption at some point.
-		return nil
+		return
 	}
 
-	if len(validator.GetOperator()) != 0 {
+	if !validator.GetOperator().Empty() {
 		if _, err := k.slashingKeeper.GetPubkey(ctx, consAddr.Bytes()); err != nil {
 			// Ignore evidence that cannot be handled.
 			//
@@ -51,21 +46,21 @@ func (k Keeper) handleEquivocationEvidence(ctx context.Context, evidence *types.
 			// getting this coordination right, it is easier to relax the
 			// constraints and ignore evidence that cannot be handled.
 			logger.Error(fmt.Sprintf("ignore evidence; expected public key for validator %s not found", consAddr))
-			return nil
+			return
 		}
 	}
 
 	// calculate the age of the evidence
 	infractionHeight := evidence.GetHeight()
 	infractionTime := evidence.GetTime()
-	ageDuration := sdkCtx.BlockHeader().Time.Sub(infractionTime)
-	ageBlocks := sdkCtx.BlockHeader().Height - infractionHeight
+	ageDuration := ctx.BlockHeader().Time.Sub(infractionTime)
+	ageBlocks := ctx.BlockHeader().Height - infractionHeight
 
 	// Reject evidence if the double-sign is too old. Evidence is considered stale
 	// if the difference in time and number of blocks is greater than the allowed
 	// parameters defined.
-	cp := sdkCtx.ConsensusParams()
-	if cp.Evidence != nil {
+	cp := ctx.ConsensusParams()
+	if cp != nil && cp.Evidence != nil {
 		if ageDuration > cp.Evidence.MaxAgeDuration && ageBlocks > cp.Evidence.MaxAgeNumBlocks {
 			logger.Info(
 				"ignored equivocation; evidence too old",
@@ -75,7 +70,7 @@ func (k Keeper) handleEquivocationEvidence(ctx context.Context, evidence *types.
 				"infraction_time", infractionTime,
 				"max_age_duration", cp.Evidence.MaxAgeDuration,
 			)
-			return nil
+			return
 		}
 	}
 
@@ -91,7 +86,7 @@ func (k Keeper) handleEquivocationEvidence(ctx context.Context, evidence *types.
 			"infraction_height", infractionHeight,
 			"infraction_time", infractionTime,
 		)
-		return nil
+		return
 	}
 
 	logger.Info(
@@ -110,42 +105,24 @@ func (k Keeper) handleEquivocationEvidence(ctx context.Context, evidence *types.
 	distributionHeight := infractionHeight - sdk.ValidatorUpdateDelay
 
 	// Slash validator. The `power` is the int64 power of the validator as provided
-	// to/by CometBFT. This value is validator.Tokens as sent to CometBFT via
+	// to/by Tendermint. This value is validator.Tokens as sent to Tendermint via
 	// ABCI, and now received as evidence. The fraction is passed in to separately
 	// to slash unbonding and rebonding delegations.
-	slashFractionDoubleSign, err := k.slashingKeeper.SlashFractionDoubleSign(ctx)
-	if err != nil {
-		return err
-	}
-
-	err = k.slashingKeeper.SlashWithInfractionReason(
+	k.slashingKeeper.SlashWithInfractionReason(
 		ctx,
 		consAddr,
-		slashFractionDoubleSign,
+		k.slashingKeeper.SlashFractionDoubleSign(ctx),
 		evidence.GetValidatorPower(), distributionHeight,
-		st.Infraction_INFRACTION_DOUBLE_SIGN,
+		stakingtypes.Infraction_INFRACTION_DOUBLE_SIGN,
 	)
-	if err != nil {
-		return err
-	}
 
 	// Jail the validator if not already jailed. This will begin unbonding the
 	// validator if not already unbonding (tombstoned).
 	if !validator.IsJailed() {
-		err = k.slashingKeeper.Jail(ctx, consAddr)
-		if err != nil {
-			return err
-		}
+		k.slashingKeeper.Jail(ctx, consAddr)
 	}
 
-	err = k.slashingKeeper.JailUntil(ctx, consAddr, types.DoubleSignJailEndTime)
-	if err != nil {
-		return err
-	}
-
-	err = k.slashingKeeper.Tombstone(ctx, consAddr)
-	if err != nil {
-		return err
-	}
-	return k.Evidences.Set(ctx, evidence.Hash(), evidence)
+	k.slashingKeeper.JailUntil(ctx, consAddr, types.DoubleSignJailEndTime)
+	k.slashingKeeper.Tombstone(ctx, consAddr)
+	k.SetEvidence(ctx, evidence)
 }

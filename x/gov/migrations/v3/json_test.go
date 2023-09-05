@@ -8,8 +8,6 @@ import (
 	"github.com/cosmos/gogoproto/proto"
 	"github.com/stretchr/testify/require"
 
-	sdkmath "cosmossdk.io/math"
-
 	"github.com/cosmos/cosmos-sdk/client"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -45,7 +43,7 @@ func TestMigrateJSON(t *testing.T) {
 			VotingEndTime:    propTime,
 			Status:           v1beta1.StatusDepositPeriod,
 			FinalTallyResult: v1beta1.EmptyTallyResult(),
-			TotalDeposit:     sdk.NewCoins(sdk.NewCoin("stake", sdkmath.NewInt(123))),
+			TotalDeposit:     sdk.NewCoins(sdk.NewCoin("stake", sdk.NewInt(123))),
 		},
 	}
 	govGenState.Votes = v1beta1.Votes{
@@ -75,7 +73,6 @@ func TestMigrateJSON(t *testing.T) {
 	// Make sure about:
 	// - Proposals use MsgExecLegacyContent
 	expected := `{
-	"constitution": "",
 	"deposit_params": {
 		"max_deposit_period": "172800s",
 		"min_deposit": [
@@ -90,8 +87,6 @@ func TestMigrateJSON(t *testing.T) {
 	"proposals": [
 		{
 			"deposit_end_time": "2001-09-09T01:46:40Z",
-			"expedited": false,
-			"failed_reason": "",
 			"final_tally_result": {
 				"abstain_count": "0",
 				"no_count": "0",

@@ -6,12 +6,11 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"cosmossdk.io/x/nft"
-
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/tx"
 	"github.com/cosmos/cosmos-sdk/version"
+	"github.com/cosmos/cosmos-sdk/x/nft"
 )
 
 // GetTxCmd returns the transaction commands for this module
@@ -45,10 +44,6 @@ func NewCmdSend() *cobra.Command {
 			clientCtx, err := client.GetClientTxContext(cmd)
 			if err != nil {
 				return err
-			}
-
-			if args[0] == "" || args[1] == "" || args[2] == "" {
-				return fmt.Errorf("class-id, nft-id and receiver cannot be empty")
 			}
 
 			msg := nft.MsgSend{

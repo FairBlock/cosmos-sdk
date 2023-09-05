@@ -4,9 +4,8 @@ import (
 	"math/rand"
 	"testing"
 
+	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
 	"gotest.tools/v3/assert"
-
-	sdkmath "cosmossdk.io/math"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/address"
@@ -20,7 +19,7 @@ func TestProposalMsgs(t *testing.T) {
 	s := rand.NewSource(1)
 	r := rand.New(s)
 
-	ctx := sdk.NewContext(nil, true, nil)
+	ctx := sdk.NewContext(nil, tmproto.Header{}, true, nil)
 	accounts := simtypes.RandomAccounts(r, 3)
 
 	// execute ProposalMsgs function
@@ -39,9 +38,9 @@ func TestProposalMsgs(t *testing.T) {
 
 	assert.Equal(t, sdk.AccAddress(address.Module("gov")).String(), msgUpdateParams.Authority)
 	assert.Equal(t, uint64(122877), msgUpdateParams.Params.BlocksPerYear)
-	assert.DeepEqual(t, sdkmath.LegacyNewDecWithPrec(95, 2), msgUpdateParams.Params.GoalBonded)
-	assert.DeepEqual(t, sdkmath.LegacyNewDecWithPrec(94, 2), msgUpdateParams.Params.InflationMax)
-	assert.DeepEqual(t, sdkmath.LegacyNewDecWithPrec(23, 2), msgUpdateParams.Params.InflationMin)
-	assert.DeepEqual(t, sdkmath.LegacyNewDecWithPrec(89, 2), msgUpdateParams.Params.InflationRateChange)
+	assert.DeepEqual(t, sdk.NewDecWithPrec(95, 2), msgUpdateParams.Params.GoalBonded)
+	assert.DeepEqual(t, sdk.NewDecWithPrec(94, 2), msgUpdateParams.Params.InflationMax)
+	assert.DeepEqual(t, sdk.NewDecWithPrec(23, 2), msgUpdateParams.Params.InflationMin)
+	assert.DeepEqual(t, sdk.NewDecWithPrec(89, 2), msgUpdateParams.Params.InflationRateChange)
 	assert.Equal(t, "XhhuTSkuxK", msgUpdateParams.Params.MintDenom)
 }

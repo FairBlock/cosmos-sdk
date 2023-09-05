@@ -3,11 +3,10 @@ package testdata
 import (
 	"context"
 	"fmt"
-	"testing"
 
 	"github.com/cosmos/gogoproto/proto"
+	"github.com/stretchr/testify/require"
 	grpc "google.golang.org/grpc"
-	"gotest.tools/v3/assert"
 
 	"github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -66,9 +65,9 @@ func (m *TestAnyResponse) UnpackInterfaces(unpacker types.AnyUnpacker) error {
 // 2. That the gas consumption of the query is the same. When
 // `gasOverwrite` is set to true, we also check that this consumed
 // gas value is equal to the hardcoded `gasConsumed`.
-func DeterministicIterations[request, response proto.Message](
+func DeterministicIterations[request proto.Message, response proto.Message](
 	ctx sdk.Context,
-	t *testing.T,
+	require *require.Assertions,
 	req request,
 	grpcFn func(context.Context, request, ...grpc.CallOption) (response, error),
 	gasConsumed uint64,
@@ -76,7 +75,7 @@ func DeterministicIterations[request, response proto.Message](
 ) {
 	before := ctx.GasMeter().GasConsumed()
 	prevRes, err := grpcFn(ctx, req)
-	assert.NilError(t, err)
+	require.NoError(err)
 	if gasOverwrite { // to handle regressions, i.e. check that gas consumption didn't change
 		gasConsumed = ctx.GasMeter().GasConsumed() - before
 	}
@@ -84,8 +83,8 @@ func DeterministicIterations[request, response proto.Message](
 	for i := 0; i < iterCount; i++ {
 		before := ctx.GasMeter().GasConsumed()
 		res, err := grpcFn(ctx, req)
-		assert.Equal(t, ctx.GasMeter().GasConsumed()-before, gasConsumed)
-		assert.NilError(t, err)
-		assert.DeepEqual(t, res, prevRes)
+		require.Equal(ctx.GasMeter().GasConsumed()-before, gasConsumed)
+		require.NoError(err)
+		require.Equal(res, prevRes)
 	}
 }

@@ -1,13 +1,12 @@
 package params_test
 
 import (
-	"context"
 	"testing"
+
+	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/suite"
-
-	storetypes "cosmossdk.io/store/types"
 
 	"github.com/cosmos/cosmos-sdk/testutil"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -18,12 +17,11 @@ import (
 	paramstestutil "github.com/cosmos/cosmos-sdk/x/params/testutil"
 	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
 	"github.com/cosmos/cosmos-sdk/x/params/types/proposal"
-	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 )
 
 // StakingKeeper defines the expected staking keeper
 type StakingKeeper interface {
-	MaxValidators(ctx context.Context) (res uint32, err error)
+	MaxValidators(ctx sdk.Context) (res uint32)
 }
 
 type HandlerTestSuite struct {
@@ -36,15 +34,15 @@ type HandlerTestSuite struct {
 
 func (suite *HandlerTestSuite) SetupTest() {
 	encodingCfg := moduletestutil.MakeTestEncodingConfig(params.AppModuleBasic{})
-	key := storetypes.NewKVStoreKey(paramtypes.StoreKey)
-	tkey := storetypes.NewTransientStoreKey("params_transient_test")
+	key := sdk.NewKVStoreKey(paramtypes.StoreKey)
+	tkey := sdk.NewTransientStoreKey("params_transient_test")
 
 	ctx := testutil.DefaultContext(key, tkey)
 	paramsKeeper := keeper.NewKeeper(encodingCfg.Codec, encodingCfg.Amino, key, tkey)
-	paramsKeeper.Subspace("staking").WithKeyTable(stakingtypes.ParamKeyTable()) //nolint:staticcheck // TODO: depreacte this test case
+	paramsKeeper.Subspace("staking").WithKeyTable(stakingtypes.ParamKeyTable())
 	ctrl := gomock.NewController(suite.T())
 	stakingKeeper := paramstestutil.NewMockStakingKeeper(ctrl)
-	stakingKeeper.EXPECT().MaxValidators(ctx).Return(uint32(1), nil)
+	stakingKeeper.EXPECT().MaxValidators(ctx).Return(uint32(1))
 
 	suite.govHandler = params.NewParamChangeProposalHandler(paramsKeeper)
 	suite.stakingKeeper = stakingKeeper
@@ -70,8 +68,7 @@ func (suite *HandlerTestSuite) TestProposalHandler() {
 			"all fields",
 			testProposal(proposal.NewParamChange(stakingtypes.ModuleName, string(stakingtypes.KeyMaxValidators), "1")),
 			func() {
-				maxVals, err := suite.stakingKeeper.MaxValidators(suite.ctx)
-				suite.Require().NoError(err)
+				maxVals := suite.stakingKeeper.MaxValidators(suite.ctx)
 				suite.Require().Equal(uint32(1), maxVals)
 			},
 			false,
@@ -93,12 +90,12 @@ func (suite *HandlerTestSuite) TestProposalHandler() {
 		//		depositParams := suite.app.GovKeeper.GetDepositParams(suite.ctx)
 		//		defaultPeriod := govv1.DefaultPeriod
 		//		suite.Require().Equal(govv1.DepositParams{
-		//			MinDeposit:       sdk.NewCoins(sdk.NewCoin("uatom", sdkmath.NewInt(64000000))),
+		//			MinDeposit:       sdk.NewCoins(sdk.NewCoin("uatom", sdk.NewInt(64000000))),
 		//			MaxDepositPeriod: &defaultPeriod,
 		//		}, depositParams)
 		//	},
 		//	false,
-		// },
+		//},
 	}
 
 	for _, tc := range testCases {

@@ -3,12 +3,9 @@ package v2
 import (
 	"fmt"
 
-	corestoretypes "cosmossdk.io/core/store"
-	"cosmossdk.io/store/prefix"
-	storetypes "cosmossdk.io/store/types"
-
 	"github.com/cosmos/cosmos-sdk/codec"
-	"github.com/cosmos/cosmos-sdk/runtime"
+	"github.com/cosmos/cosmos-sdk/store/prefix"
+	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/address"
 	"github.com/cosmos/cosmos-sdk/x/gov/types"
@@ -21,8 +18,8 @@ const proposalIDLen = 8
 // <prefix_bytes><proposal_id (8 bytes)><address_bytes>
 // into format:
 // <prefix_bytes><proposal_id (8 bytes)><address_len (1 byte)><address_bytes>
-func migratePrefixProposalAddress(store corestoretypes.KVStore, prefixBz []byte) error {
-	oldStore := prefix.NewStore(runtime.KVStoreAdapter(store), prefixBz)
+func migratePrefixProposalAddress(store sdk.KVStore, prefixBz []byte) {
+	oldStore := prefix.NewStore(store, prefixBz)
 
 	oldStoreIter := oldStore.Iterator(nil, nil)
 	defer oldStoreIter.Close()
@@ -33,13 +30,9 @@ func migratePrefixProposalAddress(store corestoretypes.KVStore, prefixBz []byte)
 		newStoreKey := append(append(prefixBz, proposalID...), address.MustLengthPrefix(addr)...)
 
 		// Set new key on store. Values don't change.
-		err := store.Set(newStoreKey, oldStoreIter.Value())
-		if err != nil {
-			return err
-		}
+		store.Set(newStoreKey, oldStoreIter.Value())
 		oldStore.Delete(oldStoreIter.Key())
 	}
-	return nil
 }
 
 // migrateStoreWeightedVotes migrates a legacy vote to an ADR-037 weighted vote.
@@ -54,8 +47,8 @@ func migrateVote(oldVote v1beta1.Vote) v1beta1.Vote {
 }
 
 // migrateStoreWeightedVotes migrates in-place all legacy votes to ADR-037 weighted votes.
-func migrateStoreWeightedVotes(store corestoretypes.KVStore, cdc codec.BinaryCodec) error {
-	iterator := storetypes.KVStorePrefixIterator(runtime.KVStoreAdapter(store), types.VotesKeyPrefix)
+func migrateStoreWeightedVotes(store sdk.KVStore, cdc codec.BinaryCodec) error {
+	iterator := sdk.KVStorePrefixIterator(store, types.VotesKeyPrefix)
 
 	defer iterator.Close()
 	for ; iterator.Valid(); iterator.Next() {
@@ -72,10 +65,7 @@ func migrateStoreWeightedVotes(store corestoretypes.KVStore, cdc codec.BinaryCod
 			return err
 		}
 
-		err = store.Set(iterator.Key(), bz)
-		if err != nil {
-			return err
-		}
+		store.Set(iterator.Key(), bz)
 	}
 
 	return nil
@@ -86,17 +76,9 @@ func migrateStoreWeightedVotes(store corestoretypes.KVStore, cdc codec.BinaryCod
 //
 // - Change addresses to be length-prefixed.
 // - Change all legacy votes to ADR-037 weighted votes.
-func MigrateStore(ctx sdk.Context, storeService corestoretypes.KVStoreService, cdc codec.BinaryCodec) error {
-	store := storeService.OpenKVStore(ctx)
-	err := migratePrefixProposalAddress(store, types.DepositsKeyPrefix)
-	if err != nil {
-		return err
-	}
-
-	err = migratePrefixProposalAddress(store, types.VotesKeyPrefix)
-	if err != nil {
-		return err
-	}
-
+func MigrateStore(ctx sdk.Context, storeKey storetypes.StoreKey, cdc codec.BinaryCodec) error {
+	store := ctx.KVStore(storeKey)
+	migratePrefixProposalAddress(store, types.DepositsKeyPrefix)
+	migratePrefixProposalAddress(store, types.VotesKeyPrefix)
 	return migrateStoreWeightedVotes(store, cdc)
 }

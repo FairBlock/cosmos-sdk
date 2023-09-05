@@ -2,10 +2,9 @@ package types_test
 
 import (
 	"bytes"
-	"crypto/rand"
 	"encoding/hex"
 	"fmt"
-	mathrand "math/rand"
+	"math/rand"
 	"strings"
 	"testing"
 
@@ -17,7 +16,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	"github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/types/bech32/legacybech32" //nolint:staticcheck // we're using this to support the legacy way of dealing with bech32
+	"github.com/cosmos/cosmos-sdk/types/bech32/legacybech32"
 )
 
 type addressTestSuite struct {
@@ -44,7 +43,7 @@ var invalidStrs = []string{
 	types.Bech32PrefixConsPub + "6789",
 }
 
-func (s *addressTestSuite) testMarshal(original, res interface{}, marshal func() ([]byte, error), unmarshal func([]byte) error) {
+func (s *addressTestSuite) testMarshal(original interface{}, res interface{}, marshal func() ([]byte, error), unmarshal func([]byte) error) {
 	bz, err := marshal()
 	s.Require().Nil(err)
 	s.Require().Nil(unmarshal(bz))
@@ -92,8 +91,8 @@ func (s *addressTestSuite) TestRandBech32AccAddrConsistency() {
 	pub := &ed25519.PubKey{Key: pubBz}
 
 	for i := 0; i < 1000; i++ {
-		_, err := rand.Read(pub.Key)
-		s.Require().NoError(err)
+		rand.Read(pub.Key)
+
 		acc := types.AccAddress(pub.Address())
 		res := types.AccAddress{}
 
@@ -101,7 +100,7 @@ func (s *addressTestSuite) TestRandBech32AccAddrConsistency() {
 		s.testMarshal(&acc, &res, acc.Marshal, (&res).Unmarshal)
 
 		str := acc.String()
-		res, err = types.AccAddressFromBech32(str)
+		res, err := types.AccAddressFromBech32(str)
 		s.Require().Nil(err)
 		s.Require().Equal(acc, res)
 
@@ -133,8 +132,8 @@ func (s *addressTestSuite) TestAddrCache() {
 	// Use a random key
 	pubBz := make([]byte, ed25519.PubKeySize)
 	pub := &ed25519.PubKey{Key: pubBz}
-	_, err := rand.Read(pub.Key)
-	s.Require().NoError(err)
+	rand.Read(pub.Key)
+
 	// Set SDK bech32 prefixes to 'osmo'
 	prefix := "osmo"
 	conf := types.GetConfig()
@@ -170,8 +169,8 @@ func (s *addressTestSuite) TestAddrCacheDisabled() {
 	// Use a random key
 	pubBz := make([]byte, ed25519.PubKeySize)
 	pub := &ed25519.PubKey{Key: pubBz}
-	_, err := rand.Read(pub.Key)
-	s.Require().NoError(err)
+	rand.Read(pub.Key)
+
 	// Set SDK bech32 prefixes to 'osmo'
 	prefix := "osmo"
 	conf := types.GetConfig()
@@ -202,8 +201,8 @@ func (s *addressTestSuite) TestValAddr() {
 	pub := &ed25519.PubKey{Key: pubBz}
 
 	for i := 0; i < 20; i++ {
-		_, err := rand.Read(pub.Key)
-		s.Require().NoError(err)
+		rand.Read(pub.Key)
+
 		acc := types.ValAddress(pub.Address())
 		res := types.ValAddress{}
 
@@ -211,7 +210,7 @@ func (s *addressTestSuite) TestValAddr() {
 		s.testMarshal(&acc, &res, acc.Marshal, (&res).Unmarshal)
 
 		str := acc.String()
-		res, err = types.ValAddressFromBech32(str)
+		res, err := types.ValAddressFromBech32(str)
 		s.Require().Nil(err)
 		s.Require().Equal(acc, res)
 
@@ -243,8 +242,8 @@ func (s *addressTestSuite) TestConsAddress() {
 	pub := &ed25519.PubKey{Key: pubBz}
 
 	for i := 0; i < 20; i++ {
-		_, err := rand.Read(pub.Key[:])
-		s.Require().NoError(err)
+		rand.Read(pub.Key[:])
+
 		acc := types.ConsAddress(pub.Address())
 		res := types.ConsAddress{}
 
@@ -252,7 +251,7 @@ func (s *addressTestSuite) TestConsAddress() {
 		s.testMarshal(&acc, &res, acc.Marshal, (&res).Unmarshal)
 
 		str := acc.String()
-		res, err = types.ConsAddressFromBech32(str)
+		res, err := types.ConsAddressFromBech32(str)
 		s.Require().Nil(err)
 		s.Require().Equal(acc, res)
 
@@ -283,7 +282,7 @@ const letterBytes = "abcdefghijklmnopqrstuvwxyz"
 func RandString(n int) string {
 	b := make([]byte, n)
 	for i := range b {
-		b[i] = letterBytes[mathrand.Intn(len(letterBytes))]
+		b[i] = letterBytes[rand.Intn(len(letterBytes))]
 	}
 	return string(b)
 }
@@ -293,8 +292,7 @@ func (s *addressTestSuite) TestConfiguredPrefix() {
 	pub := &ed25519.PubKey{Key: pubBz}
 	for length := 1; length < 10; length++ {
 		for times := 1; times < 20; times++ {
-			_, err := rand.Read(pub.Key[:])
-			s.Require().NoError(err)
+			rand.Read(pub.Key[:])
 			// Test if randomly generated prefix of a given length works
 			prefix := RandString(length)
 
@@ -348,8 +346,8 @@ func (s *addressTestSuite) TestConfiguredPrefix() {
 func (s *addressTestSuite) TestAddressInterface() {
 	pubBz := make([]byte, ed25519.PubKeySize)
 	pub := &ed25519.PubKey{Key: pubBz}
-	_, err := rand.Read(pub.Key)
-	s.Require().NoError(err)
+	rand.Read(pub.Key)
+
 	addrs := []types.Address{
 		types.ConsAddress(pub.Address()),
 		types.ValAddress(pub.Address()),
@@ -510,25 +508,25 @@ func (s *addressTestSuite) TestAddressTypesEquals() {
 	valAddr2 := types.ValAddress(addr2)
 
 	// equality
-	s.Require().True(accAddr1.Equals(accAddr1))   //nolint:gocritic // checking if these are the same
-	s.Require().True(consAddr1.Equals(consAddr1)) //nolint:gocritic // checking if these are the same
-	s.Require().True(valAddr1.Equals(valAddr1))   //nolint:gocritic // checking if these are the same
+	s.Require().True(accAddr1.Equals(accAddr1))
+	s.Require().True(consAddr1.Equals(consAddr1))
+	s.Require().True(valAddr1.Equals(valAddr1))
 
 	// emptiness
-	s.Require().True(types.AccAddress{}.Equals(types.AccAddress{})) //nolint:gocritic // checking if these are the same
+	s.Require().True(types.AccAddress{}.Equals(types.AccAddress{}))
 	s.Require().True(types.AccAddress{}.Equals(types.AccAddress(nil)))
 	s.Require().True(types.AccAddress(nil).Equals(types.AccAddress{}))
-	s.Require().True(types.AccAddress(nil).Equals(types.AccAddress(nil))) //nolint:gocritic // checking if these are the same
+	s.Require().True(types.AccAddress(nil).Equals(types.AccAddress(nil)))
 
-	s.Require().True(types.ConsAddress{}.Equals(types.ConsAddress{})) //nolint:gocritic // checking if these are the same
+	s.Require().True(types.ConsAddress{}.Equals(types.ConsAddress{}))
 	s.Require().True(types.ConsAddress{}.Equals(types.ConsAddress(nil)))
 	s.Require().True(types.ConsAddress(nil).Equals(types.ConsAddress{}))
-	s.Require().True(types.ConsAddress(nil).Equals(types.ConsAddress(nil))) //nolint:gocritic // checking if these are the same
+	s.Require().True(types.ConsAddress(nil).Equals(types.ConsAddress(nil)))
 
-	s.Require().True(types.ValAddress{}.Equals(types.ValAddress{})) //nolint:gocritic // checking if these are the same
+	s.Require().True(types.ValAddress{}.Equals(types.ValAddress{}))
 	s.Require().True(types.ValAddress{}.Equals(types.ValAddress(nil)))
 	s.Require().True(types.ValAddress(nil).Equals(types.ValAddress{}))
-	s.Require().True(types.ValAddress(nil).Equals(types.ValAddress(nil))) //nolint:gocritic // checking if these are the same
+	s.Require().True(types.ValAddress(nil).Equals(types.ValAddress(nil)))
 
 	s.Require().False(accAddr1.Equals(accAddr2))
 	s.Require().Equal(accAddr1.Equals(accAddr2), accAddr2.Equals(accAddr1))

@@ -1,7 +1,5 @@
 package types
 
-import "cosmossdk.io/collections"
-
 const (
 	// module name
 	ModuleName = "crisis"
@@ -9,4 +7,4 @@ const (
 	StoreKey = ModuleName
 )
 
-var ConstantFeeKey = collections.NewPrefix(1)
+var ConstantFeeKey = []byte{0x01}

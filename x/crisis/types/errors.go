@@ -1,9 +1,11 @@
 package types
 
-import "cosmossdk.io/errors"
+import (
+	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+)
 
 // x/crisis module sentinel errors
 var (
-	ErrNoSender         = errors.Register(ModuleName, 2, "sender address is empty")
-	ErrUnknownInvariant = errors.Register(ModuleName, 3, "unknown invariant")
+	ErrNoSender         = sdkerrors.Register(ModuleName, 2, "sender address is empty")
+	ErrUnknownInvariant = sdkerrors.Register(ModuleName, 3, "unknown invariant")
 )

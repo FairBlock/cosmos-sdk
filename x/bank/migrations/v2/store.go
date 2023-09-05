@@ -1,14 +1,11 @@
 package v2
 
 import (
-	"cosmossdk.io/core/store"
-	"cosmossdk.io/log"
 	"cosmossdk.io/math"
-	"cosmossdk.io/store/prefix"
-	storetypes "cosmossdk.io/store/types"
-
+	"github.com/cometbft/cometbft/libs/log"
 	"github.com/cosmos/cosmos-sdk/codec"
-	"github.com/cosmos/cosmos-sdk/runtime"
+	"github.com/cosmos/cosmos-sdk/store/prefix"
+	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	v1auth "github.com/cosmos/cosmos-sdk/x/auth/migrations/v1"
 	v1 "github.com/cosmos/cosmos-sdk/x/bank/migrations/v1"
@@ -18,7 +15,7 @@ import (
 // migrateSupply migrates the supply to be stored by denom key instead in a
 // single blob.
 // ref: https://github.com/cosmos/cosmos-sdk/issues/7092
-func migrateSupply(store storetypes.KVStore, cdc codec.BinaryCodec) error {
+func migrateSupply(store sdk.KVStore, cdc codec.BinaryCodec) error {
 	// Old supply was stored as a single blob under the SupplyKey.
 	var oldSupplyI v1.SupplyI
 	err := cdc.UnmarshalInterface(store.Get(v1.SupplyKey), &oldSupplyI)
@@ -54,7 +51,7 @@ func migrateSupply(store storetypes.KVStore, cdc codec.BinaryCodec) error {
 
 // migrateBalanceKeys migrate the balances keys to cater for variable-length
 // addresses.
-func migrateBalanceKeys(store storetypes.KVStore, logger log.Logger) {
+func migrateBalanceKeys(store sdk.KVStore, logger log.Logger) {
 	// old key is of format:
 	// prefix ("balances") || addrBytes (20 bytes) || denomBytes
 	// new key is of format
@@ -67,7 +64,7 @@ func migrateBalanceKeys(store storetypes.KVStore, logger log.Logger) {
 	for ; oldStoreIter.Valid(); oldStoreIter.Next() {
 		addr := v1.AddressFromBalancesStore(oldStoreIter.Key())
 		denom := oldStoreIter.Key()[v1auth.AddrLen:]
-		newStoreKey := CreatePrefixedAccountStoreKey(addr, denom)
+		newStoreKey := types.CreatePrefixedAccountStoreKey(addr, denom)
 
 		// Set new key on store. Values don't change.
 		store.Set(newStoreKey, oldStoreIter.Value())
@@ -82,8 +79,8 @@ func migrateBalanceKeys(store storetypes.KVStore, logger log.Logger) {
 // - Change balances prefix to 1 byte
 // - Change supply to be indexed by denom
 // - Prune balances & supply with zero coins (ref: https://github.com/cosmos/cosmos-sdk/pull/9229)
-func MigrateStore(ctx sdk.Context, storeService store.KVStoreService, cdc codec.BinaryCodec) error {
-	store := runtime.KVStoreAdapter(storeService.OpenKVStore(ctx))
+func MigrateStore(ctx sdk.Context, storeKey storetypes.StoreKey, cdc codec.BinaryCodec) error {
+	store := ctx.KVStore(storeKey)
 	migrateBalanceKeys(store, ctx.Logger())
 
 	if err := pruneZeroBalances(store, cdc); err != nil {
@@ -98,7 +95,7 @@ func MigrateStore(ctx sdk.Context, storeService store.KVStoreService, cdc codec.
 }
 
 // pruneZeroBalances removes the zero balance addresses from balances store.
-func pruneZeroBalances(store storetypes.KVStore, cdc codec.BinaryCodec) error {
+func pruneZeroBalances(store sdk.KVStore, cdc codec.BinaryCodec) error {
 	balancesStore := prefix.NewStore(store, BalancesPrefix)
 	iterator := balancesStore.Iterator(nil, nil)
 	defer iterator.Close()
@@ -117,7 +114,7 @@ func pruneZeroBalances(store storetypes.KVStore, cdc codec.BinaryCodec) error {
 }
 
 // pruneZeroSupply removes zero balance denom from supply store.
-func pruneZeroSupply(store storetypes.KVStore) error {
+func pruneZeroSupply(store sdk.KVStore) error {
 	supplyStore := prefix.NewStore(store, SupplyKey)
 	iterator := supplyStore.Iterator(nil, nil)
 	defer iterator.Close()
@@ -134,10 +131,4 @@ func pruneZeroSupply(store storetypes.KVStore) error {
 	}
 
 	return nil
-}
-
-// CreatePrefixedAccountStoreKey returns the key for the given account and denomination.
-// This method can be used when performing an ABCI query for the balance of an account.
-func CreatePrefixedAccountStoreKey(addr, denom []byte) []byte {
-	return append(CreateAccountBalancesPrefix(addr), denom...)
 }

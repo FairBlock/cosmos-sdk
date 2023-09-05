@@ -6,18 +6,16 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cometbft/cometbft/libs/log"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/suite"
 
-	"cosmossdk.io/log"
-	storetypes "cosmossdk.io/store/types"
-
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/codec"
-	"github.com/cosmos/cosmos-sdk/codec/address"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	"github.com/cosmos/cosmos-sdk/testutil"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+
 	moduletestutil "github.com/cosmos/cosmos-sdk/types/module/testutil"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
@@ -48,15 +46,14 @@ var (
 )
 
 func (s *GenesisTestSuite) SetupTest() {
-	key := storetypes.NewKVStoreKey(group.StoreKey)
-	testCtx := testutil.DefaultContextWithDB(s.T(), key, storetypes.NewTransientStoreKey("transient_test"))
+	key := sdk.NewKVStoreKey(group.StoreKey)
+	testCtx := testutil.DefaultContextWithDB(s.T(), key, sdk.NewTransientStoreKey("transient_test"))
 	encCfg := moduletestutil.MakeTestEncodingConfig(module.AppModuleBasic{})
 
 	ctrl := gomock.NewController(s.T())
 	accountKeeper := grouptestutil.NewMockAccountKeeper(ctrl)
 	accountKeeper.EXPECT().GetAccount(gomock.Any(), accAddr).Return(authtypes.NewBaseAccountWithAddress(accAddr)).AnyTimes()
 	accountKeeper.EXPECT().GetAccount(gomock.Any(), memberAddr).Return(authtypes.NewBaseAccountWithAddress(memberAddr)).AnyTimes()
-	accountKeeper.EXPECT().AddressCodec().Return(address.NewBech32Codec("cosmos")).AnyTimes()
 
 	bApp := baseapp.NewBaseApp(
 		"group",
@@ -69,7 +66,7 @@ func (s *GenesisTestSuite) SetupTest() {
 
 	s.sdkCtx = testCtx.Ctx
 	s.cdc = codec.NewProtoCodec(encCfg.InterfaceRegistry)
-	s.ctx = s.sdkCtx
+	s.ctx = sdk.WrapSDKContext(s.sdkCtx)
 
 	s.keeper = keeper.NewKeeper(key, s.cdc, bApp.MsgServiceRouter(), accountKeeper, group.DefaultConfig())
 }
@@ -212,7 +209,7 @@ func (s *GenesisTestSuite) TestInitExportGenesis() {
 	s.Require().Equal(genesisState.ProposalSeq, exportedGenesisState.ProposalSeq)
 }
 
-func (s *GenesisTestSuite) assertGroupPoliciesEqual(g, other *group.GroupPolicyInfo) {
+func (s *GenesisTestSuite) assertGroupPoliciesEqual(g *group.GroupPolicyInfo, other *group.GroupPolicyInfo) {
 	require := s.Require()
 	require.Equal(g.Address, other.Address)
 	require.Equal(g.GroupId, other.GroupId)
@@ -226,7 +223,7 @@ func (s *GenesisTestSuite) assertGroupPoliciesEqual(g, other *group.GroupPolicyI
 	require.Equal(dp1, dp2)
 }
 
-func (s *GenesisTestSuite) assertProposalsEqual(g, other *group.Proposal) {
+func (s *GenesisTestSuite) assertProposalsEqual(g *group.Proposal, other *group.Proposal) {
 	require := s.Require()
 	require.Equal(g.Id, other.Id)
 	require.Equal(g.GroupPolicyAddress, other.GroupPolicyAddress)
