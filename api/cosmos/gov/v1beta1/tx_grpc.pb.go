@@ -21,6 +21,7 @@ const _ = grpc.SupportPackageIsVersion7
 const (
 	Msg_SubmitProposal_FullMethodName = "/cosmos.gov.v1beta1.Msg/SubmitProposal"
 	Msg_Vote_FullMethodName           = "/cosmos.gov.v1beta1.Msg/Vote"
+	Msg_VoteEncrypted_FullMethodName  = "/cosmos.gov.v1beta1.Msg/VoteEncrypted"
 	Msg_VoteWeighted_FullMethodName   = "/cosmos.gov.v1beta1.Msg/VoteWeighted"
 	Msg_Deposit_FullMethodName        = "/cosmos.gov.v1beta1.Msg/Deposit"
 )
@@ -33,6 +34,8 @@ type MsgClient interface {
 	SubmitProposal(ctx context.Context, in *MsgSubmitProposal, opts ...grpc.CallOption) (*MsgSubmitProposalResponse, error)
 	// Vote defines a method to add a vote on a specific proposal.
 	Vote(ctx context.Context, in *MsgVote, opts ...grpc.CallOption) (*MsgVoteResponse, error)
+	// VoteEncrypted defines a method to add an encrypted vote on a specific proposal.
+	VoteEncrypted(ctx context.Context, in *MsgVoteEncrypted, opts ...grpc.CallOption) (*MsgVoteEncryptedResponse, error)
 	// VoteWeighted defines a method to add a weighted vote on a specific proposal.
 	//
 	// Since: cosmos-sdk 0.43
@@ -67,6 +70,15 @@ func (c *msgClient) Vote(ctx context.Context, in *MsgVote, opts ...grpc.CallOpti
 	return out, nil
 }
 
+func (c *msgClient) VoteEncrypted(ctx context.Context, in *MsgVoteEncrypted, opts ...grpc.CallOption) (*MsgVoteEncryptedResponse, error) {
+	out := new(MsgVoteEncryptedResponse)
+	err := c.cc.Invoke(ctx, Msg_VoteEncrypted_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *msgClient) VoteWeighted(ctx context.Context, in *MsgVoteWeighted, opts ...grpc.CallOption) (*MsgVoteWeightedResponse, error) {
 	out := new(MsgVoteWeightedResponse)
 	err := c.cc.Invoke(ctx, Msg_VoteWeighted_FullMethodName, in, out, opts...)
@@ -93,6 +105,8 @@ type MsgServer interface {
 	SubmitProposal(context.Context, *MsgSubmitProposal) (*MsgSubmitProposalResponse, error)
 	// Vote defines a method to add a vote on a specific proposal.
 	Vote(context.Context, *MsgVote) (*MsgVoteResponse, error)
+	// VoteEncrypted defines a method to add an encrypted vote on a specific proposal.
+	VoteEncrypted(context.Context, *MsgVoteEncrypted) (*MsgVoteEncryptedResponse, error)
 	// VoteWeighted defines a method to add a weighted vote on a specific proposal.
 	//
 	// Since: cosmos-sdk 0.43
@@ -111,6 +125,9 @@ func (UnimplementedMsgServer) SubmitProposal(context.Context, *MsgSubmitProposal
 }
 func (UnimplementedMsgServer) Vote(context.Context, *MsgVote) (*MsgVoteResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Vote not implemented")
+}
+func (UnimplementedMsgServer) VoteEncrypted(context.Context, *MsgVoteEncrypted) (*MsgVoteEncryptedResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method VoteEncrypted not implemented")
 }
 func (UnimplementedMsgServer) VoteWeighted(context.Context, *MsgVoteWeighted) (*MsgVoteWeightedResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method VoteWeighted not implemented")
@@ -167,6 +184,24 @@ func _Msg_Vote_Handler(srv interface{}, ctx context.Context, dec func(interface{
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Msg_VoteEncrypted_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgVoteEncrypted)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MsgServer).VoteEncrypted(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Msg_VoteEncrypted_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MsgServer).VoteEncrypted(ctx, req.(*MsgVoteEncrypted))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Msg_VoteWeighted_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(MsgVoteWeighted)
 	if err := dec(in); err != nil {
@@ -217,6 +252,10 @@ var Msg_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Vote",
 			Handler:    _Msg_Vote_Handler,
+		},
+		{
+			MethodName: "VoteEncrypted",
+			Handler:    _Msg_VoteEncrypted_Handler,
 		},
 		{
 			MethodName: "VoteWeighted",

@@ -29,6 +29,8 @@ enum VoteOption {
   VOTE_OPTION_NO = 3 [(gogoproto.enumvalue_customname) = "OptionNo"];
   // VOTE_OPTION_NO_WITH_VETO defines a no with veto vote option.
   VOTE_OPTION_NO_WITH_VETO = 4 [(gogoproto.enumvalue_customname) = "OptionNoWithVeto"];
+  // VOTE_OPTION_ENCRYPTED defines a encrypted vote
+  VOTE_OPTION_ENCRYPTED = 5 [(gogoproto.enumvalue_customname) = "OptionEncrypted"];
 }
 
 // WeightedVoteOption defines a unit of vote for vote split.
@@ -120,6 +122,17 @@ message Proposal {
   // voting_end_time is the end time of voting on a proposal.
   google.protobuf.Timestamp voting_end_time = 9
       [(gogoproto.stdtime) = true, (gogoproto.nullable) = false, (amino.dont_omitempty) = true];
+
+  // flag to check if proposal has at least one encrypted vote
+  bool has_encrypted_votes = 10;
+
+  // identity and pubkey are used to submit encrypted votes
+  string identity = 11;
+
+  string pubkey = 12;
+
+  // aggregated keyshare is used to decrypt the encrypted votes during the tally phase
+  string aggr_keyshare = 13;
 }
 
 // ProposalStatus enumerates the valid statuses of a proposal.
@@ -134,15 +147,18 @@ enum ProposalStatus {
   // PROPOSAL_STATUS_VOTING_PERIOD defines a proposal status during the voting
   // period.
   PROPOSAL_STATUS_VOTING_PERIOD = 2 [(gogoproto.enumvalue_customname) = "StatusVotingPeriod"];
+  // PROPOSAL_STATUS_TALLY_PERIOD defines a proposal status during the tally
+  // period.
+  PROPOSAL_STATUS_TALLY_PERIOD = 3 [(gogoproto.enumvalue_customname) = "StatusTallyPeriod"];
   // PROPOSAL_STATUS_PASSED defines a proposal status of a proposal that has
   // passed.
-  PROPOSAL_STATUS_PASSED = 3 [(gogoproto.enumvalue_customname) = "StatusPassed"];
+  PROPOSAL_STATUS_PASSED = 4 [(gogoproto.enumvalue_customname) = "StatusPassed"];
   // PROPOSAL_STATUS_REJECTED defines a proposal status of a proposal that has
   // been rejected.
-  PROPOSAL_STATUS_REJECTED = 4 [(gogoproto.enumvalue_customname) = "StatusRejected"];
+  PROPOSAL_STATUS_REJECTED = 5 [(gogoproto.enumvalue_customname) = "StatusRejected"];
   // PROPOSAL_STATUS_FAILED defines a proposal status of a proposal that has
   // failed.
-  PROPOSAL_STATUS_FAILED = 5 [(gogoproto.enumvalue_customname) = "StatusFailed"];
+  PROPOSAL_STATUS_FAILED = 6 [(gogoproto.enumvalue_customname) = "StatusFailed"];
 }
 
 // TallyResult defines a standard tally for a governance proposal.
@@ -176,6 +192,13 @@ message TallyResult {
     (gogoproto.customtype) = "github.com/cosmos/cosmos-sdk/types.Int",
     (gogoproto.nullable)   = false
   ];
+
+  // encrypted is the number of encrypted votes on a proposal.
+  string encrypted = 5 [
+    (cosmos_proto.scalar)  = "cosmos.Int",
+    (gogoproto.customtype) = "github.com/cosmos/cosmos-sdk/types.Int",
+    (gogoproto.nullable)   = false
+  ];
 }
 
 // Vote defines a vote on a governance proposal.
@@ -198,6 +221,8 @@ message Vote {
   //
   // Since: cosmos-sdk 0.43
   repeated WeightedVoteOption options = 4 [(gogoproto.nullable) = false, (amino.dont_omitempty) = true];
+
+  string encrypted_vote_data = 5;
 }
 
 // DepositParams defines the params for deposits on governance proposals.
@@ -249,4 +274,8 @@ message TallyParams {
     (gogoproto.nullable)   = false,
     (gogoproto.jsontag)    = "veto_threshold,omitempty"
   ];
+
+  // Duration of the tally period.
+  google.protobuf.Duration tally_period = 4
+      [(gogoproto.nullable) = false, (gogoproto.stdduration) = true, (gogoproto.jsontag) = "tally_period,omitempty"];
 }

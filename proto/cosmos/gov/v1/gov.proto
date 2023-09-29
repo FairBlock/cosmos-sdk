@@ -24,6 +24,8 @@ enum VoteOption {
   VOTE_OPTION_NO = 3;
   // VOTE_OPTION_NO_WITH_VETO defines a no with veto vote option.
   VOTE_OPTION_NO_WITH_VETO = 4;
+  // VOTE_OPTION_ENCRYPTED defines an encrypted bote
+  VOTE_OPTION_ENCRYPTED = 5;
 }
 
 // WeightedVoteOption defines a unit of vote for vote split.
@@ -96,6 +98,17 @@ message Proposal {
   //
   // Since: cosmos-sdk 0.47
   string proposer = 13 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+
+  // flag to check if proposal has at least one encrypted vote
+  bool has_encrypted_votes = 14;
+
+  // identity and pubkey are used to submit encrypted votes
+  string identity = 15;
+
+  string pubkey = 16;
+
+  // aggregated keyshare is used to decrypt the encrypted votes during the tally phase
+  string aggr_keyshare = 17;
 }
 
 // ProposalStatus enumerates the valid statuses of a proposal.
@@ -108,15 +121,18 @@ enum ProposalStatus {
   // PROPOSAL_STATUS_VOTING_PERIOD defines a proposal status during the voting
   // period.
   PROPOSAL_STATUS_VOTING_PERIOD = 2;
+  // PROPOSAL_STATUS_TALLY_PERIOD defines a proposal status during the tally
+  // period.
+  PROPOSAL_STATUS_TALLY_PERIOD = 3;
   // PROPOSAL_STATUS_PASSED defines a proposal status of a proposal that has
   // passed.
-  PROPOSAL_STATUS_PASSED = 3;
+  PROPOSAL_STATUS_PASSED = 4;
   // PROPOSAL_STATUS_REJECTED defines a proposal status of a proposal that has
   // been rejected.
-  PROPOSAL_STATUS_REJECTED = 4;
+  PROPOSAL_STATUS_REJECTED = 5;
   // PROPOSAL_STATUS_FAILED defines a proposal status of a proposal that has
   // failed.
-  PROPOSAL_STATUS_FAILED = 5;
+  PROPOSAL_STATUS_FAILED = 6;
 }
 
 // TallyResult defines a standard tally for a governance proposal.
@@ -129,6 +145,8 @@ message TallyResult {
   string no_count           = 3 [(cosmos_proto.scalar) = "cosmos.Int"];
   // no_with_veto_count is the number of no with veto votes on a proposal.
   string no_with_veto_count = 4 [(cosmos_proto.scalar) = "cosmos.Int"];
+  // encrypted_count is the number of encrypted votes on a proposal.
+  string encrypted_count    = 5 [(cosmos_proto.scalar) = "cosmos.Int"];
 }
 
 // Vote defines a vote on a governance proposal.
@@ -147,6 +165,8 @@ message Vote {
 
   // metadata is any  arbitrary metadata to attached to the vote.
   string metadata = 5;
+
+  string encrypted_vote_data = 6;
 }
 
 // DepositParams defines the params for deposits on governance proposals.
@@ -217,4 +237,16 @@ message Params {
   
   // burn deposits if quorum with vote type no_veto is met
   bool burn_vote_veto = 15;
+
+  // Duration of the voting period.
+  google.protobuf.Duration tally_period = 16 [(gogoproto.stdduration) = true];
+}
+
+// DecryptedVoteOption is the structure to which the
+// encrypted votes will be unmarshalled to when decrypted
+
+message DecryptedVoteOption {
+  // option defines the vote option.
+  VoteOption option      = 1;
+  int64      random_no   = 2;
 }
