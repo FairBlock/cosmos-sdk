@@ -30,4 +30,6 @@ message GenesisState {
   //
   // Since: cosmos-sdk 0.47
   Params params = 8;
+
+  string port_id = 9;
 }
