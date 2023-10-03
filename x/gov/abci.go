@@ -4,11 +4,14 @@ import (
 	"fmt"
 	"time"
 
+	kstypes "fairyring/x/keyshare/types"
+
 	"github.com/cosmos/cosmos-sdk/telemetry"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/gov/keeper"
 	"github.com/cosmos/cosmos-sdk/x/gov/types"
 	v1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
+	clienttypes "github.com/cosmos/ibc-go/v7/modules/core/02-client/types"
 )
 
 // EndBlocker called every block, process inflation, update validator set.
@@ -53,6 +56,67 @@ func EndBlocker(ctx sdk.Context, keeper *keeper.Keeper) {
 	// fetch active proposals whose voting periods have ended (are passed the block time)
 	keeper.IterateActiveProposalsQueue(ctx, ctx.BlockHeader().Time, func(proposal v1.Proposal) bool {
 		var tagValue, logMsg string
+		tallyPeriod := keeper.GetParams(ctx).MaxTallyPeriod
+		tallyEndTime := proposal.VotingEndTime.Add(*tallyPeriod)
+
+		if proposal.HasEncryptedVotes {
+			if proposal.AggrKeyshare == "" && (ctx.BlockTime().Compare(tallyEndTime) >= 0) {
+				proposal.Status = v1.StatusFailed
+				tagValue = types.AttributeValueProposalFailed
+				logMsg = "failed"
+
+				keeper.RefundAndDeleteDeposits(ctx, proposal.Id)
+
+				keeper.SetProposal(ctx, proposal)
+				keeper.RemoveFromActiveProposalQueue(ctx, proposal.Id, *proposal.VotingEndTime)
+
+				// when proposal become active
+				keeper.Hooks().AfterProposalVotingPeriodEnded(ctx, proposal.Id)
+
+				logger.Info(
+					"proposal tallied",
+					"proposal", proposal.Id,
+					"results", logMsg,
+				)
+
+				ctx.EventManager().EmitEvent(
+					sdk.NewEvent(
+						types.EventTypeActiveProposal,
+						sdk.NewAttribute(types.AttributeKeyProposalID, fmt.Sprintf("%d", proposal.Id)),
+						sdk.NewAttribute(types.AttributeKeyProposalResult, tagValue),
+					),
+				)
+				return false
+			}
+
+			if proposal.AggrKeyshare == "" {
+				var packetData kstypes.GetAggrKeysharePacketData
+				sPort := keeper.GetPort(ctx)
+				params := keeper.GetParams(ctx)
+				packetData.Identity = proposal.Identity
+				timeoutTimestamp := ctx.BlockTime().Add(time.Second * 20).UnixNano()
+
+				_, err := keeper.TransmitGetAggrKeysharePacket(ctx,
+					packetData,
+					sPort,
+					params.ChannelId,
+					clienttypes.ZeroHeight(),
+					uint64(timeoutTimestamp),
+				)
+
+				if err != nil {
+					logger.Info(
+						"IBC Request to fetch aggr. Keyshare failed",
+						"proposal", proposal.Id,
+						"error", err,
+					)
+				}
+
+				return false
+			}
+
+			keeper.DecryptVotes(ctx, proposal)
+		}
 
 		passes, burnDeposits, tallyResults := keeper.Tally(ctx, proposal)
 

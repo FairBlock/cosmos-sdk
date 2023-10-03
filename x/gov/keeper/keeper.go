@@ -18,8 +18,10 @@ import (
 
 // Keeper defines the governance module Keeper
 type Keeper struct {
-	authKeeper types.AccountKeeper
-	bankKeeper types.BankKeeper
+	*v1.IBCKeeper
+	authKeeper       types.AccountKeeper
+	bankKeeper       types.BankKeeper
+	connectionKeeper v1.ConnectionKeeper
 
 	// The reference to the DelegationSet and ValidatorSet to get information about validators and delegators
 	sk types.StakingKeeper
@@ -62,6 +64,10 @@ func NewKeeper(
 	cdc codec.BinaryCodec, key storetypes.StoreKey, authKeeper types.AccountKeeper,
 	bankKeeper types.BankKeeper, sk types.StakingKeeper,
 	router *baseapp.MsgServiceRouter, config types.Config, authority string,
+	channelKeeper v1.ChannelKeeper,
+	portKeeper v1.PortKeeper,
+	scopedKeeper v1.ScopedKeeper,
+	connectionKeeper v1.ConnectionKeeper,
 ) *Keeper {
 	// ensure governance module account is set
 	if addr := authKeeper.GetModuleAddress(types.ModuleName); addr == nil {
@@ -78,14 +84,22 @@ func NewKeeper(
 	}
 
 	return &Keeper{
-		storeKey:   key,
-		authKeeper: authKeeper,
-		bankKeeper: bankKeeper,
-		sk:         sk,
-		cdc:        cdc,
-		router:     router,
-		config:     config,
-		authority:  authority,
+		IBCKeeper: v1.NewIBCKeeper(
+			types.PortKey,
+			key,
+			channelKeeper,
+			portKeeper,
+			scopedKeeper,
+		),
+		storeKey:         key,
+		authKeeper:       authKeeper,
+		bankKeeper:       bankKeeper,
+		connectionKeeper: connectionKeeper,
+		sk:               sk,
+		cdc:              cdc,
+		router:           router,
+		config:           config,
+		authority:        authority,
 	}
 }
 

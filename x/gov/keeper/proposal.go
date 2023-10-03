@@ -3,12 +3,17 @@ package keeper
 import (
 	"errors"
 	"fmt"
+	"strconv"
+	"time"
+
+	kstypes "fairyring/x/keyshare/types"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/cosmos/cosmos-sdk/x/gov/types"
 	v1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
+	clienttypes "github.com/cosmos/ibc-go/v7/modules/core/02-client/types"
 )
 
 // SubmitProposal creates a new proposal given an array of messages
@@ -95,6 +100,24 @@ func (keeper Keeper) SubmitProposal(ctx sdk.Context, messages []sdk.Msg, metadat
 
 	// called right after a proposal is submitted
 	keeper.Hooks().AfterProposalSubmission(ctx, proposalID)
+
+	var packetData kstypes.RequestAggrKeysharePacketData
+	sPort := keeper.GetPort(ctx)
+	params := keeper.GetParams(ctx)
+	packetData.ProposalId = strconv.FormatUint(proposalID, 10)
+	timeoutTimestamp := ctx.BlockTime().Add(time.Second * 20).UnixNano()
+
+	_, err = keeper.TransmitRequestAggrKeysharePacket(ctx,
+		packetData,
+		sPort,
+		params.ChannelId,
+		clienttypes.ZeroHeight(),
+		uint64(timeoutTimestamp),
+	)
+
+	if err != nil {
+		return v1.Proposal{}, err
+	}
 
 	ctx.EventManager().EmitEvent(
 		sdk.NewEvent(

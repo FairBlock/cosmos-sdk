@@ -18,6 +18,15 @@ const (
 
 	// RouterKey is the message route for gov
 	RouterKey = ModuleName
+
+	// Version defines the current version the IBC module supports
+	Version = "keyshare-1"
+
+	// PortID is the default port id that module binds to
+	PortID = "gov"
+
+	// ChannelID is the default channel id that module will use to transmit IBC packets.
+	ChannelID = "channel-0"
 )
 
 // Keys for governance store
@@ -51,7 +60,14 @@ var (
 
 	// ParamsKey is the key to query all gov params
 	ParamsKey = []byte{0x30}
+
+	PortKey    = KeyPrefix("gov-port-")
+	ChannelKey = KeyPrefix("gov-channel-")
 )
+
+func KeyPrefix(p string) []byte {
+	return []byte(p)
+}
 
 var lenTime = len(sdk.FormatTimeBytes(time.Now()))
 

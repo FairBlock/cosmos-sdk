@@ -17,6 +17,7 @@ const (
 	StatusNil           = ProposalStatus_PROPOSAL_STATUS_UNSPECIFIED
 	StatusDepositPeriod = ProposalStatus_PROPOSAL_STATUS_DEPOSIT_PERIOD
 	StatusVotingPeriod  = ProposalStatus_PROPOSAL_STATUS_VOTING_PERIOD
+	StatusTallyPeriod   = ProposalStatus_PROPOSAL_STATUS_TALLY_PERIOD
 	StatusPassed        = ProposalStatus_PROPOSAL_STATUS_PASSED
 	StatusRejected      = ProposalStatus_PROPOSAL_STATUS_REJECTED
 	StatusFailed        = ProposalStatus_PROPOSAL_STATUS_FAILED
