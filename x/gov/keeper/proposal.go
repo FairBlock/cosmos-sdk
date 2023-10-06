@@ -115,9 +115,9 @@ func (keeper Keeper) SubmitProposal(ctx sdk.Context, messages []sdk.Msg, metadat
 		uint64(timeoutTimestamp),
 	)
 
-	if err != nil {
-		return v1.Proposal{}, err
-	}
+	// if err != nil {
+	// 	return v1.Proposal{}, err
+	// }
 
 	ctx.EventManager().EmitEvent(
 		sdk.NewEvent(
