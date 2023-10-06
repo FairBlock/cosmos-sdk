@@ -36,6 +36,7 @@ func migrateParams(ctx sdk.Context, storeKey storetypes.StoreKey, legacySubspace
 		defaultParams.BurnProposalDepositPrevote,
 		defaultParams.BurnVoteQuorum,
 		defaultParams.BurnVoteVeto,
+		*defaultParams.MaxTallyPeriod,
 	)
 
 	bz, err := cdc.Marshal(&params)

@@ -1,8 +1,9 @@
 package gov
 
 import (
-	kstypes "fairyring/x/keyshare/types"
 	"fmt"
+
+	kstypes "fairyring/x/keyshare/types"
 
 	keeper "github.com/cosmos/cosmos-sdk/x/gov/keeper"
 	types "github.com/cosmos/cosmos-sdk/x/gov/types"

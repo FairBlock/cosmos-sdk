@@ -26,6 +26,7 @@ const (
 	TallyParamsQuorum          = "tally_params_quorum"
 	TallyParamsThreshold       = "tally_params_threshold"
 	TallyParamsVeto            = "tally_params_veto"
+	TallyParamsTallyPeriod     = "tally_params_tally_period"
 )
 
 // GenDepositParamsDepositPeriod returns randomized DepositParamsDepositPeriod
@@ -63,6 +64,11 @@ func GenTallyParamsVeto(r *rand.Rand) math.LegacyDec {
 	return sdk.NewDecWithPrec(int64(simulation.RandIntBetween(r, 250, 334)), 3)
 }
 
+// GenTallyParamsTallyPeriod returns randomized TallyParamsTallyPeriod
+func GenTallyParamsTallyPeriod(r *rand.Rand) time.Duration {
+	return time.Duration(simulation.RandIntBetween(r, 1, 2*60*60*24*2)) * time.Second
+}
+
 // RandomizedGenState generates a random GenesisState for gov
 func RandomizedGenState(simState *module.SimulationState) {
 	startingProposalID := uint64(simState.Rand.Intn(100))
@@ -77,6 +83,12 @@ func RandomizedGenState(simState *module.SimulationState) {
 	simState.AppParams.GetOrGenerate(
 		simState.Cdc, DepositParamsDepositPeriod, &depositPeriod, simState.Rand,
 		func(r *rand.Rand) { depositPeriod = GenDepositParamsDepositPeriod(r) },
+	)
+
+	var tallyPeriod time.Duration
+	simState.AppParams.GetOrGenerate(
+		simState.Cdc, TallyParamsTallyPeriod, &tallyPeriod, simState.Rand,
+		func(r *rand.Rand) { tallyPeriod = GenTallyParamsTallyPeriod(r) },
 	)
 
 	var minInitialDepositRatio sdk.Dec
@@ -111,7 +123,7 @@ func RandomizedGenState(simState *module.SimulationState) {
 
 	govGenesis := v1.NewGenesisState(
 		startingProposalID,
-		v1.NewParams(minDeposit, depositPeriod, votingPeriod, quorum.String(), threshold.String(), veto.String(), minInitialDepositRatio.String(), simState.Rand.Intn(2) == 0, simState.Rand.Intn(2) == 0, simState.Rand.Intn(2) == 0),
+		v1.NewParams(minDeposit, depositPeriod, votingPeriod, quorum.String(), threshold.String(), veto.String(), minInitialDepositRatio.String(), simState.Rand.Intn(2) == 0, simState.Rand.Intn(2) == 0, simState.Rand.Intn(2) == 0, tallyPeriod),
 	)
 
 	bz, err := json.MarshalIndent(&govGenesis, "", " ")

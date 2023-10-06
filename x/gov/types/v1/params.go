@@ -11,7 +11,8 @@ import (
 
 // Default period for deposits & voting
 const (
-	DefaultPeriod time.Duration = time.Hour * 24 * 2 // 2 days
+	DefaultPeriod     time.Duration = time.Hour * 24 * 2 // 2 days
+	DefaultTestPeriod time.Duration = time.Minute * 2    // 2 minutes
 )
 
 // Default governance params
@@ -53,7 +54,9 @@ func NewVotingParams(votingPeriod *time.Duration) VotingParams {
 // NewParams creates a new Params instance with given values.
 func NewParams(
 	minDeposit sdk.Coins, maxDepositPeriod, votingPeriod time.Duration,
-	quorum, threshold, vetoThreshold, minInitialDepositRatio string, burnProposalDeposit, burnVoteQuorum, burnVoteVeto bool,
+	quorum, threshold, vetoThreshold, minInitialDepositRatio string,
+	burnProposalDeposit, burnVoteQuorum, burnVoteVeto bool,
+	tallyPeriod time.Duration,
 ) Params {
 	return Params{
 		MinDeposit:                 minDeposit,
@@ -66,6 +69,7 @@ func NewParams(
 		BurnProposalDepositPrevote: burnProposalDeposit,
 		BurnVoteQuorum:             burnVoteQuorum,
 		BurnVoteVeto:               burnVoteVeto,
+		MaxTallyPeriod:             &tallyPeriod,
 	}
 }
 
@@ -82,6 +86,7 @@ func DefaultParams() Params {
 		DefaultBurnProposalPrevote,
 		DefaultBurnVoteQuorom,
 		DefaultBurnVoteVeto,
+		DefaultTestPeriod,
 	)
 }
 
