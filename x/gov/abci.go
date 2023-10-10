@@ -89,6 +89,11 @@ func EndBlocker(ctx sdk.Context, keeper *keeper.Keeper) {
 				return false
 			}
 
+			if proposal.Status == v1.StatusVotingPeriod {
+				proposal.Status = v1.StatusTallyPeriod
+				keeper.SetProposal(ctx, proposal)
+			}
+
 			if proposal.AggrKeyshare == "" {
 				var packetData kstypes.GetAggrKeysharePacketData
 				sPort := keeper.GetPort(ctx)

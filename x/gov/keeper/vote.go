@@ -31,6 +31,14 @@ func (keeper Keeper) AddVote(ctx sdk.Context, proposalID uint64, voterAddr sdk.A
 	vote := v1.NewVote(proposalID, voterAddr, options, metadata, encData)
 	keeper.SetVote(ctx, vote)
 
+	if encData != "" {
+		proposal, _ := keeper.GetProposal(ctx, proposalID)
+		if !proposal.HasEncryptedVotes {
+			proposal.HasEncryptedVotes = true
+			keeper.SetProposal(ctx, proposal)
+		}
+	}
+
 	// called after a vote on a proposal is cast
 	keeper.Hooks().AfterProposalVote(ctx, proposalID, voterAddr)
 
