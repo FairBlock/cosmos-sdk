@@ -196,6 +196,7 @@ func (im IBCModule) OnRecvPacket(
 	// 	)
 
 	case *kstypes.KeysharePacketData_AggrKeyshareDataPacket:
+		fmt.Println("\n\n\nReceived aagr Keyshare data")
 		packetAck, err := im.keeper.OnRecvAggrKeyshareDataPacket(ctx, modulePacket, *packet.AggrKeyshareDataPacket)
 		if err != nil {
 			ack = channeltypes.NewErrorAcknowledgement(err)
