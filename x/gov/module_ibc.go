@@ -181,7 +181,7 @@ func (im IBCModule) OnRecvPacket(
 	// 		ack = channeltypes.NewErrorAcknowledgement(err)
 	// 	} else {
 	// 		// Encode packet acknowledgment
-	// 		packetAckBytes, err := types.ModuleCdc.MarshalJSON(&packetAck)
+	// 		packetAckBytes, err := kstypes.ModuleCdc.MarshalJSON(&packetAck)
 	// 		if err != nil {
 	// 			return channeltypes.NewErrorAcknowledgement(sdkerrors.Wrap(cosmoserror.ErrJSONMarshal, err.Error()))
 	// 		}
