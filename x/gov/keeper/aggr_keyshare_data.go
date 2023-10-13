@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
 
 	"fairyring/x/keyshare/types"
@@ -17,11 +18,25 @@ func (k Keeper) OnRecvAggrKeyshareDataPacket(ctx sdk.Context, packet channeltype
 		return packetAck, err
 	}
 
-	pID, _ := strconv.ParseUint(data.ProposalId, 10, 64)
+	fmt.Println("\n\n\n\n")
+	fmt.Println(data.AggrKeyshare)
+	fmt.Println(data.Identity)
+	fmt.Println(data.ProposalId)
+
+	pID, err := strconv.ParseUint(data.ProposalId, 10, 64)
+	if err != nil {
+		fmt.Println("PARSE ERROR")
+	}
+
+	fmt.Println("PID: ", pID)
+
 	proposal, found := k.GetProposal(ctx, pID)
 	if !found {
+		fmt.Println("proposal not found")
 		return packetAck, errors.New("Proposal not found")
 	}
+
+	fmt.Println("\n\n\n\n")
 
 	proposal.AggrKeyshare = data.AggrKeyshare
 	k.SetProposal(ctx, proposal)
