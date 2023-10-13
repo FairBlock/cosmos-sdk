@@ -158,7 +158,7 @@ func (keeper Keeper) SetProposal(ctx sdk.Context, proposal v1.Proposal) {
 
 	store := ctx.KVStore(keeper.storeKey)
 
-	if proposal.Status == v1.StatusVotingPeriod {
+	if proposal.Status == v1.StatusVotingPeriod || proposal.Status == v1.StatusTallyPeriod {
 		store.Set(types.VotingPeriodProposalKey(proposal.Id), []byte{1})
 	} else {
 		store.Delete(types.VotingPeriodProposalKey(proposal.Id))
