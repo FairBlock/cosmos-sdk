@@ -28,7 +28,7 @@ func (keeper Keeper) AddVote(ctx sdk.Context, proposalID uint64, voterAddr sdk.A
 		}
 	}
 
-	vote := v1.NewVote(proposalID, voterAddr, options, metadata, encData)
+	vote := v1.NewVote(proposalID, voterAddr, options, encData, metadata)
 	keeper.SetVote(ctx, vote)
 
 	if encData != "" {
