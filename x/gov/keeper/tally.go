@@ -158,6 +158,7 @@ func (keeper Keeper) DecryptVotes(ctx sdk.Context, proposal v1.Proposal) {
 		fmt.Println("3")
 		fmt.Println("Options :", vote.Options)
 		fmt.Println("Options :", vote.Options[0].Option)
+		fmt.Println("Options :", v1.OptionEncrypted)
 		if vote.Options[0].Option == v1.OptionEncrypted {
 			if vote.EncryptedVoteData != "" {
 				fmt.Println("Vote : ", vote.EncryptedVoteData)
