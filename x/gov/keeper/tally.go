@@ -3,7 +3,6 @@ package keeper
 import (
 	"bytes"
 	"encoding/hex"
-	"fmt"
 
 	"cosmossdk.io/math"
 	enc "github.com/FairBlock/DistributedIBE/encryption"
@@ -18,7 +17,6 @@ import (
 // Tally iterates over the votes and updates the tally of a proposal based on the voting power of the
 // voters
 func (keeper Keeper) Tally(ctx sdk.Context, proposal v1.Proposal) (passes bool, burnDeposits bool, tallyResults v1.TallyResult) {
-	fmt.Println("\n\n\nTallying votes\n\n\n")
 	results := make(map[v1.VoteOption]sdk.Dec)
 	results[v1.OptionYes] = math.LegacyZeroDec()
 	results[v1.OptionAbstain] = math.LegacyZeroDec()
@@ -135,19 +133,14 @@ func (keeper Keeper) Tally(ctx sdk.Context, proposal v1.Proposal) (passes bool, 
 
 // DecryptVotes decrypts any encrypted votes
 func (keeper Keeper) DecryptVotes(ctx sdk.Context, proposal v1.Proposal) {
-	fmt.Println("\n\n\nDecrypting Votes\n\n\n")
-
 	pubKey := proposal.Pubkey
 	publicKeyByte, _ := hex.DecodeString(pubKey)
-	fmt.Println("1")
-
 	suite := bls.NewBLS12381Suite()
 
 	publicKeyPoint := suite.G1().Point()
 	publicKeyPoint.UnmarshalBinary(publicKeyByte)
 
 	keyByte, _ := hex.DecodeString(proposal.AggrKeyshare)
-	fmt.Println("2")
 
 	skPoint := suite.G2().Point()
 	skPoint.UnmarshalBinary(keyByte)
@@ -155,27 +148,19 @@ func (keeper Keeper) DecryptVotes(ctx sdk.Context, proposal v1.Proposal) {
 	var deletedVotes, modifiedVotes []v1.Vote
 
 	keeper.IterateVotes(ctx, proposal.Id, func(vote v1.Vote) bool {
-		fmt.Println("3")
-		fmt.Println("Options :", vote.Options)
-		fmt.Println("Options :", vote.Options[0].Option)
-		fmt.Println("Options :", v1.OptionEncrypted)
 		if vote.Options[0].Option == v1.OptionEncrypted {
-			fmt.Println("Vote : ", vote.EncryptedVoteData)
 			if vote.EncryptedVoteData != "" {
-				fmt.Println("Vote : ", vote.EncryptedVoteData)
 				var decryptedVote bytes.Buffer
 				var voteBuffer bytes.Buffer
 				_, err := voteBuffer.Write([]byte(vote.EncryptedVoteData))
 
 				if err != nil {
-					fmt.Println("4")
 					deletedVotes = append(deletedVotes, vote)
 					return false
 				}
 
 				err = enc.Decrypt(publicKeyPoint, skPoint, &decryptedVote, &voteBuffer)
 				if err != nil {
-					fmt.Println("5")
 					deletedVotes = append(deletedVotes, vote)
 					return false
 				}
@@ -183,32 +168,27 @@ func (keeper Keeper) DecryptVotes(ctx sdk.Context, proposal v1.Proposal) {
 				var decVote v1.DecryptedVoteOption
 				err = decVote.Unmarshal(decryptedVote.Bytes())
 				if err != nil {
-					fmt.Println("6")
 					deletedVotes = append(deletedVotes, vote)
 					return false
 				}
 
 				if decVote.Option == v1.OptionEncrypted {
-					fmt.Println("7")
 					deletedVotes = append(deletedVotes, vote)
 					return false
 				}
-				fmt.Println("8")
 
 				vote.Options[0].Option = decVote.Option
 				vote.Options[0].Weight = "1"
 
 				modifiedVotes = append(modifiedVotes, vote)
-				fmt.Println("9")
 
 				return false
 			}
+			deletedVotes = append(deletedVotes, vote)
+			return false
 		}
 		return false
 	})
-
-	fmt.Println("\n\n\nModified Votes:\n", modifiedVotes)
-	fmt.Println("\n\n\nDeleted Votes:\n", deletedVotes)
 
 	for _, dv := range deletedVotes {
 		voter := sdk.MustAccAddressFromBech32(dv.Voter)
