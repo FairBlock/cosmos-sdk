@@ -3,6 +3,7 @@ package keeper
 import (
 	"bytes"
 	"encoding/hex"
+	"fmt"
 
 	"cosmossdk.io/math"
 	enc "github.com/FairBlock/DistributedIBE/encryption"
@@ -17,6 +18,7 @@ import (
 // Tally iterates over the votes and updates the tally of a proposal based on the voting power of the
 // voters
 func (keeper Keeper) Tally(ctx sdk.Context, proposal v1.Proposal) (passes bool, burnDeposits bool, tallyResults v1.TallyResult) {
+	fmt.Println("\n\n\nTallying votes\n\n\n")
 	results := make(map[v1.VoteOption]sdk.Dec)
 	results[v1.OptionYes] = math.LegacyZeroDec()
 	results[v1.OptionAbstain] = math.LegacyZeroDec()
@@ -133,6 +135,8 @@ func (keeper Keeper) Tally(ctx sdk.Context, proposal v1.Proposal) (passes bool, 
 
 // DecryptVotes decrypts any encrypted votes
 func (keeper Keeper) DecryptVotes(ctx sdk.Context, proposal v1.Proposal) {
+	fmt.Println("\n\n\nDecrypting Votes\n\n\n")
+
 	pubKey := proposal.Pubkey
 	publicKeyByte, _ := hex.DecodeString(pubKey)
 
@@ -150,6 +154,7 @@ func (keeper Keeper) DecryptVotes(ctx sdk.Context, proposal v1.Proposal) {
 	keeper.IterateVotes(ctx, proposal.Id, func(vote v1.Vote) bool {
 		if vote.Options[0].Option == v1.OptionEncrypted {
 			if vote.EncryptedVoteData != "" {
+				fmt.Println("Vote : ", vote.EncryptedVoteData)
 				var decryptedVote bytes.Buffer
 				var voteBuffer bytes.Buffer
 				_, err := voteBuffer.Write([]byte(vote.EncryptedVoteData))
@@ -186,6 +191,9 @@ func (keeper Keeper) DecryptVotes(ctx sdk.Context, proposal v1.Proposal) {
 		}
 		return false
 	})
+
+	fmt.Println("\n\n\nModified Votes:\n", modifiedVotes)
+	fmt.Println("\n\n\nDeleted Votes:\n", deletedVotes)
 
 	for _, dv := range deletedVotes {
 		voter := sdk.MustAccAddressFromBech32(dv.Voter)

@@ -124,6 +124,7 @@ func EndBlocker(ctx sdk.Context, keeper *keeper.Keeper) {
 				// FOR TESTING ONLY, HARDCODE AGGR. KEYSHARE //
 				//===========================================//
 
+				fmt.Println("\n\n\nHardcoding aggr keyshare\n\n\n")
 				shareByte, err := hex.DecodeString("29c861be5016b20f5a4397795e3f086d818b11ad02e0dd8ee28e485988b6cb07")
 				if err != nil {
 					fmt.Println("invalid share provided")
@@ -148,6 +149,7 @@ func EndBlocker(ctx sdk.Context, keeper *keeper.Keeper) {
 				extractedKeyHex := hex.EncodeToString(extractedBinary)
 				proposal.AggrKeyshare = extractedKeyHex
 				keeper.SetProposal(ctx, proposal)
+				fmt.Println("\n\n\nProposal Set\n\n\n")
 
 				return false
 			}
@@ -156,6 +158,7 @@ func EndBlocker(ctx sdk.Context, keeper *keeper.Keeper) {
 		}
 
 		passes, burnDeposits, tallyResults := keeper.Tally(ctx, proposal)
+		fmt.Println("\n\n\nvotes tallied\n\n\n")
 
 		if burnDeposits {
 			keeper.DeleteAndBurnDeposits(ctx, proposal.Id)
