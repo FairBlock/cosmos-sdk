@@ -157,6 +157,7 @@ func (keeper Keeper) DecryptVotes(ctx sdk.Context, proposal v1.Proposal) {
 	keeper.IterateVotes(ctx, proposal.Id, func(vote v1.Vote) bool {
 		fmt.Println("3")
 		fmt.Println("Options :", vote.Options)
+		fmt.Println("Options :", vote.Options[0].Option)
 		if vote.Options[0].Option == v1.OptionEncrypted {
 			if vote.EncryptedVoteData != "" {
 				fmt.Println("Vote : ", vote.EncryptedVoteData)
@@ -165,12 +166,14 @@ func (keeper Keeper) DecryptVotes(ctx sdk.Context, proposal v1.Proposal) {
 				_, err := voteBuffer.Write([]byte(vote.EncryptedVoteData))
 
 				if err != nil {
+					fmt.Println("4")
 					deletedVotes = append(deletedVotes, vote)
 					return false
 				}
 
 				err = enc.Decrypt(publicKeyPoint, skPoint, &decryptedVote, &voteBuffer)
 				if err != nil {
+					fmt.Println("5")
 					deletedVotes = append(deletedVotes, vote)
 					return false
 				}
@@ -178,18 +181,23 @@ func (keeper Keeper) DecryptVotes(ctx sdk.Context, proposal v1.Proposal) {
 				var decVote v1.DecryptedVoteOption
 				err = decVote.Unmarshal(decryptedVote.Bytes())
 				if err != nil {
+					fmt.Println("6")
 					deletedVotes = append(deletedVotes, vote)
 					return false
 				}
 
 				if decVote.Option == v1.OptionEncrypted {
+					fmt.Println("7")
 					deletedVotes = append(deletedVotes, vote)
+					return false
 				}
+				fmt.Println("8")
 
 				vote.Options[0].Option = decVote.Option
 				vote.Options[0].Weight = "1"
 
 				modifiedVotes = append(modifiedVotes, vote)
+				fmt.Println("9")
 
 				return false
 			}
