@@ -139,6 +139,7 @@ func (keeper Keeper) DecryptVotes(ctx sdk.Context, proposal v1.Proposal) {
 
 	pubKey := proposal.Pubkey
 	publicKeyByte, _ := hex.DecodeString(pubKey)
+	fmt.Println("1")
 
 	suite := bls.NewBLS12381Suite()
 
@@ -146,12 +147,16 @@ func (keeper Keeper) DecryptVotes(ctx sdk.Context, proposal v1.Proposal) {
 	publicKeyPoint.UnmarshalBinary(publicKeyByte)
 
 	keyByte, _ := hex.DecodeString(proposal.AggrKeyshare)
+	fmt.Println("2")
+
 	skPoint := suite.G2().Point()
 	skPoint.UnmarshalBinary(keyByte)
 
 	var deletedVotes, modifiedVotes []v1.Vote
 
 	keeper.IterateVotes(ctx, proposal.Id, func(vote v1.Vote) bool {
+		fmt.Println("3")
+		fmt.Println("Options :", vote.Options)
 		if vote.Options[0].Option == v1.OptionEncrypted {
 			if vote.EncryptedVoteData != "" {
 				fmt.Println("Vote : ", vote.EncryptedVoteData)
