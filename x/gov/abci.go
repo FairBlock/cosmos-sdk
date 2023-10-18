@@ -1,17 +1,20 @@
 package gov
 
 import (
+	"encoding/hex"
 	"fmt"
 	"time"
 
 	kstypes "fairyring/x/keyshare/types"
 
+	distIBE "github.com/FairBlock/DistributedIBE"
 	"github.com/cosmos/cosmos-sdk/telemetry"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/gov/keeper"
 	"github.com/cosmos/cosmos-sdk/x/gov/types"
 	v1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	clienttypes "github.com/cosmos/ibc-go/v7/modules/core/02-client/types"
+	bls "github.com/drand/kyber-bls12381"
 )
 
 // EndBlocker called every block, process inflation, update validator set.
@@ -117,34 +120,34 @@ func EndBlocker(ctx sdk.Context, keeper *keeper.Keeper) {
 					)
 				}
 
-				// //===========================================//
-				// // FOR TESTING ONLY, HARDCODE AGGR. KEYSHARE //
-				// //===========================================//
+				//===========================================//
+				// FOR TESTING ONLY, HARDCODE AGGR. KEYSHARE //
+				//===========================================//
 
-				// shareByte, err := hex.DecodeString("29c861be5016b20f5a4397795e3f086d818b11ad02e0dd8ee28e485988b6cb07")
-				// if err != nil {
-				// 	return false
-				// }
+				shareByte, err := hex.DecodeString("29c861be5016b20f5a4397795e3f086d818b11ad02e0dd8ee28e485988b6cb07")
+				if err != nil {
+					return false
+				}
 
-				// share := bls.NewKyberScalar()
-				// err = share.UnmarshalBinary(shareByte)
-				// if err != nil {
-				// 	fmt.Printf("invalid share provided, got error while unmarshaling: %s\n", err.Error())
-				// 	return false
-				// }
+				share := bls.NewKyberScalar()
+				err = share.UnmarshalBinary(shareByte)
+				if err != nil {
+					fmt.Printf("invalid share provided, got error while unmarshaling: %s\n", err.Error())
+					return false
+				}
 
-				// s := bls.NewBLS12381Suite()
-				// extractedKey := distIBE.Extract(s, share, 1, []byte(proposal.Identity))
+				s := bls.NewBLS12381Suite()
+				extractedKey := distIBE.Extract(s, share, 1, []byte(proposal.Identity))
 
-				// extractedBinary, err := extractedKey.SK.MarshalBinary()
-				// if err != nil {
-				// 	fmt.Printf("Error while marshaling the extracted key: %s\n", err.Error())
-				// 	return false
-				// }
-				// extractedKeyHex := hex.EncodeToString(extractedBinary)
-				// proposal.AggrKeyshare = extractedKeyHex
-				// keeper.SetProposal(ctx, proposal)
-				// return false
+				extractedBinary, err := extractedKey.SK.MarshalBinary()
+				if err != nil {
+					fmt.Printf("Error while marshaling the extracted key: %s\n", err.Error())
+					return false
+				}
+				extractedKeyHex := hex.EncodeToString(extractedBinary)
+				proposal.AggrKeyshare = extractedKeyHex
+				keeper.SetProposal(ctx, proposal)
+				return false
 			}
 
 			keeper.DecryptVotes(ctx, proposal)
