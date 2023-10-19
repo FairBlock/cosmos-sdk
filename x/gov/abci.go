@@ -59,8 +59,14 @@ func EndBlocker(ctx sdk.Context, keeper *keeper.Keeper) {
 		tallyPeriod := keeper.GetParams(ctx).MaxTallyPeriod
 		tallyEndTime := proposal.VotingEndTime.Add(*tallyPeriod)
 
+		fmt.Println("\n\n\nVoting period ended for Proposal: ", proposal.Id)
+		fmt.Println("Proposal aggr keyshare: ", proposal.AggrKeyshare)
+
 		if proposal.HasEncryptedVotes {
+			fmt.Println("\n\n Proposal has encrypted votes")
+
 			if proposal.AggrKeyshare == "" && (ctx.BlockTime().Compare(tallyEndTime) >= 0) {
+				fmt.Println("\n\n Proposal tally period is over")
 				proposal.Status = v1.StatusFailed
 				tagValue = types.AttributeValueProposalFailed
 				logMsg = "failed"
@@ -150,6 +156,7 @@ func EndBlocker(ctx sdk.Context, keeper *keeper.Keeper) {
 				// return false
 			}
 
+			fmt.Println("\n\nDecrypting votes\n\n")
 			keeper.DecryptVotes(ctx, proposal)
 		}
 
