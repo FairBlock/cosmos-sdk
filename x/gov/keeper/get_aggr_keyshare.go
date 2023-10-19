@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"errors"
+	"fmt"
 
 	"fairyring/x/keyshare/types"
 
@@ -45,6 +46,8 @@ func (k Keeper) OnAcknowledgementGetAggrKeysharePacket(ctx sdk.Context, packet c
 
 		return nil
 	case *channeltypes.Acknowledgement_Result:
+		fmt.Println("\n\nSuccessfully Transmitted GetAggrKeysharePacket\n\n")
+
 		// Decode the packet acknowledgment
 		var packetAck types.GetAggrKeysharePacketAck
 
