@@ -98,9 +98,7 @@ func EndBlocker(ctx sdk.Context, keeper *keeper.Keeper) {
 			if proposal.Status == v1.StatusVotingPeriod {
 				proposal.Status = v1.StatusTallyPeriod
 				keeper.SetProposal(ctx, proposal)
-			}
 
-			if proposal.AggrKeyshare == "" {
 				var packetData kstypes.GetAggrKeysharePacketData
 				sPort := keeper.GetPort(ctx)
 				params := keeper.GetParams(ctx)
@@ -125,39 +123,44 @@ func EndBlocker(ctx sdk.Context, keeper *keeper.Keeper) {
 				}
 
 				return false
-
-				// //===========================================//
-				// // FOR TESTING ONLY, HARDCODE AGGR. KEYSHARE //
-				// //===========================================//
-
-				// shareByte, err := hex.DecodeString("29c861be5016b20f5a4397795e3f086d818b11ad02e0dd8ee28e485988b6cb07")
-				// if err != nil {
-				// 	return false
-				// }
-
-				// share := bls.NewKyberScalar()
-				// err = share.UnmarshalBinary(shareByte)
-				// if err != nil {
-				// 	fmt.Printf("invalid share provided, got error while unmarshaling: %s\n", err.Error())
-				// 	return false
-				// }
-
-				// s := bls.NewBLS12381Suite()
-				// extractedKey := distIBE.Extract(s, share, 1, []byte(proposal.Identity))
-
-				// extractedBinary, err := extractedKey.SK.MarshalBinary()
-				// if err != nil {
-				// 	fmt.Printf("Error while marshaling the extracted key: %s\n", err.Error())
-				// 	return false
-				// }
-				// extractedKeyHex := hex.EncodeToString(extractedBinary)
-				// proposal.AggrKeyshare = extractedKeyHex
-				// keeper.SetProposal(ctx, proposal)
-				// return false
 			}
 
-			fmt.Println("\n\nDecrypting votes\n\n")
-			keeper.DecryptVotes(ctx, proposal)
+			// //===========================================//
+			// // FOR TESTING ONLY, HARDCODE AGGR. KEYSHARE //
+			// //===========================================//
+
+			// if proposal.AggrKeyshare == "" {
+
+			// 	shareByte, err := hex.DecodeString("29c861be5016b20f5a4397795e3f086d818b11ad02e0dd8ee28e485988b6cb07")
+			// 	if err != nil {
+			// 		return false
+			// 	}
+
+			// 	share := bls.NewKyberScalar()
+			// 	err = share.UnmarshalBinary(shareByte)
+			// 	if err != nil {
+			// 		fmt.Printf("invalid share provided, got error while unmarshaling: %s\n", err.Error())
+			// 		return false
+			// 	}
+
+			// 	s := bls.NewBLS12381Suite()
+			// 	extractedKey := distIBE.Extract(s, share, 1, []byte(proposal.Identity))
+
+			// 	extractedBinary, err := extractedKey.SK.MarshalBinary()
+			// 	if err != nil {
+			// 		fmt.Printf("Error while marshaling the extracted key: %s\n", err.Error())
+			// 		return false
+			// 	}
+			// 	extractedKeyHex := hex.EncodeToString(extractedBinary)
+			// 	proposal.AggrKeyshare = extractedKeyHex
+			// 	keeper.SetProposal(ctx, proposal)
+			// 	return false
+			// }
+
+			if proposal.AggrKeyshare != "" {
+				fmt.Println("\n\nDecrypting\n\n")
+				keeper.DecryptVotes(ctx, proposal)
+			}
 		}
 
 		passes, burnDeposits, tallyResults := keeper.Tally(ctx, proposal)
