@@ -160,6 +160,8 @@ func EndBlocker(ctx sdk.Context, keeper *keeper.Keeper) {
 			if proposal.AggrKeyshare != "" {
 				fmt.Println("\n\nDecrypting\n\n")
 				keeper.DecryptVotes(ctx, proposal)
+			} else {
+				return false
 			}
 		}
 
