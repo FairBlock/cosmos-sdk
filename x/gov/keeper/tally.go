@@ -152,7 +152,14 @@ func (keeper Keeper) DecryptVotes(ctx sdk.Context, proposal v1.Proposal) {
 			if vote.EncryptedVoteData != "" {
 				var decryptedVote bytes.Buffer
 				var voteBuffer bytes.Buffer
-				_, err := voteBuffer.Write([]byte(vote.EncryptedVoteData))
+
+				decodedVoteData, err := hex.DecodeString(vote.EncryptedVoteData)
+				if err != nil {
+					deletedVotes = append(deletedVotes, vote)
+					return false
+				}
+
+				_, err = voteBuffer.Write(decodedVoteData)
 
 				if err != nil {
 					deletedVotes = append(deletedVotes, vote)
