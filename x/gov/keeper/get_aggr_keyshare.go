@@ -22,6 +22,8 @@ func (k Keeper) TransmitGetAggrKeysharePacket(
 	timeoutHeight clienttypes.Height,
 	timeoutTimestamp uint64,
 ) (uint64, error) {
+	fmt.Println("\n\n\nTransmitGetAggrKeysharePacket\n\n\n")
+
 	channelCap, ok := k.ScopedKeeper.GetCapability(ctx, host.ChannelCapabilityPath(sourcePort, sourceChannel))
 	if !ok {
 		return 0, sdkerrors.Wrap(channeltypes.ErrChannelCapabilityNotFound, "module does not own channel capability")
@@ -38,16 +40,17 @@ func (k Keeper) TransmitGetAggrKeysharePacket(
 // OnAcknowledgementGetAggrKeysharePacket responds to the the success or failure of a packet
 // acknowledgement written on the receiving chain.
 func (k Keeper) OnAcknowledgementGetAggrKeysharePacket(ctx sdk.Context, packet channeltypes.Packet, data types.GetAggrKeysharePacketData, ack channeltypes.Acknowledgement) error {
+	fmt.Println("\n\n\nOnAcknowledgementGetAggrKeysharePacket\n\n\n")
+
 	switch dispatchedAck := ack.Response.(type) {
 	case *channeltypes.Acknowledgement_Error:
 
 		// TODO: failed acknowledgement logic
 		_ = dispatchedAck.Error
+		fmt.Println("\n\n\nnOnAcknowledgementGetAggrKeysharePacket failure for reqID: ", data.Identity)
 
 		return nil
 	case *channeltypes.Acknowledgement_Result:
-		fmt.Println("\n\nSuccessfully Transmitted GetAggrKeysharePacket\n\n")
-
 		// Decode the packet acknowledgment
 		var packetAck types.GetAggrKeysharePacketAck
 
@@ -56,7 +59,7 @@ func (k Keeper) OnAcknowledgementGetAggrKeysharePacket(ctx sdk.Context, packet c
 			return errors.New("cannot unmarshal acknowledgment")
 		}
 
-		// TODO: successful acknowledgement logic
+		fmt.Println("\n\n\nnOnAcknowledgementGetAggrKeysharePacket success for reqID: ", data.Identity)
 
 		return nil
 	default:

@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
 
 	kstypes "fairyring/x/keyshare/types"
@@ -22,6 +23,8 @@ func (k Keeper) TransmitRequestAggrKeysharePacket(
 	timeoutHeight clienttypes.Height,
 	timeoutTimestamp uint64,
 ) (uint64, error) {
+	fmt.Println("\n\n\nTransmitRequestAggrKeysharePacket\n\n\n")
+
 	channelCap, ok := k.ScopedKeeper.GetCapability(ctx, host.ChannelCapabilityPath(sourcePort, sourceChannel))
 	if !ok {
 		return 0, sdkerrors.Wrap(channeltypes.ErrChannelCapabilityNotFound, "module does not own channel capability")
@@ -38,11 +41,13 @@ func (k Keeper) TransmitRequestAggrKeysharePacket(
 // OnAcknowledgementRequestAggrKeysharePacket responds to the the success or failure of a packet
 // acknowledgement written on the receiving chain.
 func (k Keeper) OnAcknowledgementRequestAggrKeysharePacket(ctx sdk.Context, packet channeltypes.Packet, data kstypes.RequestAggrKeysharePacketData, ack channeltypes.Acknowledgement) error {
+	fmt.Println("\n\n\nOnAcknowledgementRequestAggrKeysharePacket\n\n\n")
 	switch dispatchedAck := ack.Response.(type) {
 	case *channeltypes.Acknowledgement_Error:
 
 		// TODO: failed acknowledgement logic
 		_ = dispatchedAck.Error
+		fmt.Println("\n\n\nOnAcknowledgementRequestAggrKeysharePacket failure for reqID: ", data.ProposalId)
 
 		return nil
 	case *channeltypes.Acknowledgement_Result:
@@ -64,6 +69,7 @@ func (k Keeper) OnAcknowledgementRequestAggrKeysharePacket(ctx sdk.Context, pack
 		proposal.Pubkey = packetAck.Pubkey
 
 		k.SetProposal(ctx, proposal)
+		fmt.Println("\n\n\nOnAcknowledgementRequestAggrKeysharePacket success for reqID: ", data.ProposalId)
 
 		return nil
 	default:

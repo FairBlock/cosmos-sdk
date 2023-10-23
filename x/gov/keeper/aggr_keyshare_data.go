@@ -13,6 +13,8 @@ import (
 
 // OnRecvAggrKeyshareDataPacket processes packet reception
 func (k Keeper) OnRecvAggrKeyshareDataPacket(ctx sdk.Context, packet channeltypes.Packet, data types.AggrKeyshareDataPacketData) (packetAck types.AggrKeyshareDataPacketAck, err error) {
+	fmt.Println("\n\n\nOnRecvAggrKeyshareDataPacket\n\n\n")
+
 	// validate packet data upon receiving
 	if err := data.ValidateBasic(); err != nil {
 		return packetAck, err
