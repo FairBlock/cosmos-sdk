@@ -7,6 +7,7 @@ import (
 
 	keeper "github.com/cosmos/cosmos-sdk/x/gov/keeper"
 	types "github.com/cosmos/cosmos-sdk/x/gov/types"
+	v1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 
 	sdkerrors "cosmossdk.io/errors"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -229,10 +230,11 @@ func (im IBCModule) OnRecvPacket(
 			ack = channeltypes.NewErrorAcknowledgement(err)
 		} else {
 			// Encode packet acknowledgment
-			packetAckBytes, err := kstypes.ModuleCdc.MarshalJSON(&packetAck)
-			if err != nil {
-				return channeltypes.NewErrorAcknowledgement(sdkerrors.Wrap(cosmoserror.ErrJSONMarshal, err.Error()))
-			}
+			packetAckBytes := v1.MustProtoMarshalJSON(&packetAck)
+			// packetAckBytes, err := types.ModuleCdc.MarshalJSON(&packetAck)
+			// if err != nil {
+			// 	return channeltypes.NewErrorAcknowledgement(sdkerrors.Wrap(cosmoserror.ErrJSONMarshal, err.Error()))
+			// }
 			ack = channeltypes.NewResultAcknowledgement(sdk.MustSortJSON(packetAckBytes))
 		}
 		ctx.EventManager().EmitEvent(
@@ -267,7 +269,7 @@ func (im IBCModule) OnAcknowledgementPacket(
 	// this line is used by starport scaffolding # oracle/packet/module/ack
 
 	var modulePacketData kstypes.KeysharePacketData
-	if err := modulePacketData.Unmarshal(modulePacket.GetData()); err != nil {
+	if err := kstypes.ModuleCdc.UnmarshalJSON(modulePacket.GetData(), &modulePacketData); err != nil {
 		return sdkerrors.Wrapf(cosmoserror.ErrUnknownRequest, "cannot unmarshal packet data: %s", err.Error())
 	}
 
