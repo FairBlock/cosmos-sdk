@@ -263,8 +263,3 @@ message TrustedCounterParty {
   string channel_id = 3;
 }
 
-message LastProcessedSequence {
-  string channel_id = 1;
-  string port_id = 2;
-  uint64 seq_no = 3;
-}

@@ -2,7 +2,6 @@ package keeper
 
 import (
 	"errors"
-	"fmt"
 	"strconv"
 
 	"fairyring/x/keyshare/types"
@@ -13,32 +12,20 @@ import (
 
 // OnRecvAggrKeyshareDataPacket processes packet reception
 func (k Keeper) OnRecvAggrKeyshareDataPacket(ctx sdk.Context, packet channeltypes.Packet, data types.AggrKeyshareDataPacketData) (packetAck types.AggrKeyshareDataPacketAck, err error) {
-	fmt.Println("\n\n\nOnRecvAggrKeyshareDataPacket\n\n\n")
-
 	// validate packet data upon receiving
 	if err := data.ValidateBasic(); err != nil {
 		return packetAck, err
 	}
 
-	fmt.Println("\n\n\n\n")
-	fmt.Println(data.AggrKeyshare)
-	fmt.Println(data.Identity)
-	fmt.Println(data.ProposalId)
-
 	pID, err := strconv.ParseUint(data.ProposalId, 10, 64)
 	if err != nil {
-		fmt.Println("PARSE ERROR")
+		return packetAck, err
 	}
-
-	fmt.Println("PID: ", pID)
 
 	proposal, found := k.GetProposal(ctx, pID)
 	if !found {
-		fmt.Println("proposal not found")
 		return packetAck, errors.New("Proposal not found")
 	}
-
-	fmt.Println("\n\n\n\n")
 
 	proposal.AggrKeyshare = data.AggrKeyshare
 	k.SetProposal(ctx, proposal)

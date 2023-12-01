@@ -151,90 +151,16 @@ func (im IBCModule) OnRecvPacket(
 		return channeltypes.NewErrorAcknowledgement(sdkerrors.Wrapf(cosmoserror.ErrUnknownRequest, "cannot unmarshal packet data: %s", err.Error()))
 	}
 
-	fmt.Println("\n\nCurrent Block Height: ", ctx.BlockHeight())
-	lastProcessedSeq, found := im.keeper.GetLastSequence(ctx, modulePacket.SourceChannel, modulePacket.SourcePort)
-	if !found {
-		fmt.Println("\n\n\nlastProcessedSeq not found\n\n\n")
-		lastProcessedSeq.PortId = modulePacket.SourcePort
-		lastProcessedSeq.ChannelId = modulePacket.SourceChannel
-	} else {
-		fmt.Println("\n\n\nlastProcessedSeq found\n\n\n")
-		fmt.Println("last seq: ", lastProcessedSeq.SeqNo, "   current seq: ", modulePacket.Sequence)
-		if lastProcessedSeq.SeqNo >= modulePacket.Sequence {
-			fmt.Println("\n\n\nPacket already prcessed. Skipping\n\n\n")
-			return channeltypes.NewErrorAcknowledgement(sdkerrors.Wrapf(cosmoserror.ErrInvalidSequence, "already processed packet with seq: %d", modulePacket.Sequence))
-		}
-	}
-	lastProcessedSeq.SeqNo = modulePacket.Sequence
-	fmt.Println("\n\nSetting lastProcessedSeq: \nChannel: ", lastProcessedSeq.ChannelId, "   Port: ", lastProcessedSeq.PortId, "   SeqNo: ", lastProcessedSeq.SeqNo)
-	im.keeper.SetLastSequence(ctx, lastProcessedSeq)
-
-	// For Testing if set
-	testSeq, found := im.keeper.GetLastSequence(ctx, modulePacket.SourceChannel, modulePacket.SourcePort)
-	if !found {
-		fmt.Println("\n\n\nlastProcessedSeq not found\n\n\n")
-	} else {
-		fmt.Println("\n\n\nlastProcessedSeq found\n\n\n")
-		fmt.Println("last seq: ", testSeq.SeqNo)
-	}
-
 	// Dispatch packet
 	switch packet := modulePacketData.Packet.(type) {
 
-	// case *kstypes.KeysharePacketData_RequestAggrKeysharePacket:
-	// 	packetAck, err := im.keeper.OnRecvRequestAggrKeysharePacket(ctx, modulePacket, *packet.RequestAggrKeysharePacket)
-	// 	if err != nil {
-	// 		ack = channeltypes.NewErrorAcknowledgement(err)
-	// 	} else {
-	// 		// Encode packet acknowledgment
-	// 		packetAckBytes, err := types.ModuleCdc.MarshalJSON(&packetAck)
-	// 		if err != nil {
-	// 			return channeltypes.NewErrorAcknowledgement(sdkerrors.Wrap(cosmoserror.ErrJSONMarshal, err.Error()))
-	// 		}
-	// 		ack = channeltypes.NewResultAcknowledgement(sdk.MustSortJSON(packetAckBytes))
-	// 	}
-	// 	ctx.EventManager().EmitEvent(
-	// 		sdk.NewEvent(
-	// 			types.EventTypeRequestAggrKeysharePacket,
-	// 			sdk.NewAttribute(sdk.AttributeKeyModule, types.ModuleName),
-	// 			sdk.NewAttribute(types.AttributeKeyAckSuccess, fmt.Sprintf("%t", err != nil)),
-	// 			sdk.NewAttribute(types.AttributeKeyAckIdentity, packetAck.Identity),
-	// 			sdk.NewAttribute(types.AttributeKeyAckPubkey, packetAck.Pubkey),
-	// 		),
-	// 	)
-
-	// case *kstypes.KeysharePacketData_GetAggrKeysharePacket:
-	// 	packetAck, err := im.keeper.OnRecvGetAggrKeysharePacket(ctx, modulePacket, *packet.GetAggrKeysharePacket)
-	// 	if err != nil {
-	// 		ack = channeltypes.NewErrorAcknowledgement(err)
-	// 	} else {
-	// 		// Encode packet acknowledgment
-	// 		packetAckBytes, err := kstypes.ModuleCdc.MarshalJSON(&packetAck)
-	// 		if err != nil {
-	// 			return channeltypes.NewErrorAcknowledgement(sdkerrors.Wrap(cosmoserror.ErrJSONMarshal, err.Error()))
-	// 		}
-	// 		ack = channeltypes.NewResultAcknowledgement(sdk.MustSortJSON(packetAckBytes))
-	// 	}
-	// 	ctx.EventManager().EmitEvent(
-	// 		sdk.NewEvent(
-	// 			types.EventTypeGetAggrKeysharePacket,
-	// 			sdk.NewAttribute(sdk.AttributeKeyModule, types.ModuleName),
-	// 			sdk.NewAttribute(types.AttributeKeyAckSuccess, fmt.Sprintf("%t", err != nil)),
-	// 		),
-	// 	)
-
 	case *kstypes.KeysharePacketData_AggrKeyshareDataPacket:
-		fmt.Println("\n\n\nReceived aagr Keyshare data")
 		packetAck, err := im.keeper.OnRecvAggrKeyshareDataPacket(ctx, modulePacket, *packet.AggrKeyshareDataPacket)
 		if err != nil {
 			ack = channeltypes.NewErrorAcknowledgement(err)
 		} else {
 			// Encode packet acknowledgment
 			packetAckBytes := v1.MustProtoMarshalJSON(&packetAck)
-			// packetAckBytes, err := types.ModuleCdc.MarshalJSON(&packetAck)
-			// if err != nil {
-			// 	return channeltypes.NewErrorAcknowledgement(sdkerrors.Wrap(cosmoserror.ErrJSONMarshal, err.Error()))
-			// }
 			ack = channeltypes.NewResultAcknowledgement(sdk.MustSortJSON(packetAckBytes))
 		}
 		ctx.EventManager().EmitEvent(
@@ -290,12 +216,6 @@ func (im IBCModule) OnAcknowledgementPacket(
 		}
 		eventType = kstypes.EventTypeGetAggrKeysharePacket
 
-	// case *types.KeysharePacketData_AggrKeyshareDataPacket:
-	// 	err := im.keeper.OnAcknowledgementAggrKeyshareDataPacket(ctx, modulePacket, *packet.AggrKeyshareDataPacket, ack)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	eventType = types.EventTypeAggrKeyshareDataPacket
 	// this line is used by starport scaffolding # ibc/packet/module/ack
 	default:
 		errMsg := fmt.Sprintf("unrecognized %s packet type: %T", types.ModuleName, packet)

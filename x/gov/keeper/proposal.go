@@ -107,17 +107,13 @@ func (keeper Keeper) SubmitProposal(ctx sdk.Context, messages []sdk.Msg, metadat
 	packetData.ProposalId = strconv.FormatUint(proposalID, 10)
 	timeoutTimestamp := ctx.BlockTime().Add(time.Second * 20).UnixNano()
 
-	_, err = keeper.TransmitRequestAggrKeysharePacket(ctx,
+	_, _ = keeper.TransmitRequestAggrKeysharePacket(ctx,
 		packetData,
 		sPort,
 		params.ChannelId,
 		clienttypes.ZeroHeight(),
 		uint64(timeoutTimestamp),
 	)
-
-	// if err != nil {
-	// 	return v1.Proposal{}, err
-	// }
 
 	ctx.EventManager().EmitEvent(
 		sdk.NewEvent(
