@@ -3,11 +3,13 @@ package keeper
 import (
 	"errors"
 	"strconv"
+	"time"
 
 	kstypes "fairyring/x/keyshare/types"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	v1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	clienttypes "github.com/cosmos/ibc-go/v7/modules/core/02-client/types"
 	channeltypes "github.com/cosmos/ibc-go/v7/modules/core/04-channel/types"
 	host "github.com/cosmos/ibc-go/v7/modules/core/24-host"
@@ -72,8 +74,24 @@ func (k Keeper) OnAcknowledgementRequestAggrKeysharePacket(ctx sdk.Context, pack
 
 // OnTimeoutRequestAggrKeysharePacket responds to the case where a packet has not been transmitted because of a timeout
 func (k Keeper) OnTimeoutRequestAggrKeysharePacket(ctx sdk.Context, packet channeltypes.Packet, data kstypes.RequestAggrKeysharePacketData) error {
+	pID, _ := strconv.ParseUint(data.ProposalId, 10, 64)
+	proposal, found := k.GetProposal(ctx, pID)
+	if !found {
+		return errors.New("Proposal not found")
+	}
 
-	// TODO: packet timeout logic
+	if (proposal.Status == v1.ProposalStatus_PROPOSAL_STATUS_DEPOSIT_PERIOD) ||
+		(proposal.Status == v1.ProposalStatus_PROPOSAL_STATUS_VOTING_PERIOD) {
+		timeoutTimestamp := ctx.BlockTime().Add(time.Second * 20).UnixNano()
+
+		_, _ = k.TransmitRequestAggrKeysharePacket(ctx,
+			data,
+			packet.SourcePort,
+			packet.SourceChannel,
+			clienttypes.ZeroHeight(),
+			uint64(timeoutTimestamp),
+		)
+	}
 
 	return nil
 }

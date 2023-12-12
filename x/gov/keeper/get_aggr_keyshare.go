@@ -59,7 +59,9 @@ func (k Keeper) OnAcknowledgementGetAggrKeysharePacket(ctx sdk.Context, packet c
 // OnTimeoutGetAggrKeysharePacket responds to the case where a packet has not been transmitted because of a timeout
 func (k Keeper) OnTimeoutGetAggrKeysharePacket(ctx sdk.Context, packet channeltypes.Packet, data types.GetAggrKeysharePacketData) error {
 
-	// TODO: packet timeout logic
+	// No processing is required since GetAggrKeysharePacket is sent
+	// every block till a response is received or the tally period is over.
+	// ref: abci.go: 108
 
 	return nil
 }

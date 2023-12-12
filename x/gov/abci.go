@@ -105,7 +105,6 @@ func EndBlocker(ctx sdk.Context, keeper *keeper.Keeper) {
 				packetData.Identity = proposal.Identity
 				timeoutTimestamp := ctx.BlockTime().Add(time.Second * 20).UnixNano()
 
-				fmt.Println("\n\nTransmitting GetAggrKeysharePacket\n\n")
 				_, err := keeper.TransmitGetAggrKeysharePacket(ctx,
 					packetData,
 					sPort,
@@ -158,7 +157,6 @@ func EndBlocker(ctx sdk.Context, keeper *keeper.Keeper) {
 			// }
 
 			if proposal.AggrKeyshare != "" {
-				fmt.Println("\n\nDecrypting\n\n")
 				keeper.DecryptVotes(ctx, proposal)
 			} else {
 				return false
