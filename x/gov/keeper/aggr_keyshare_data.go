@@ -68,3 +68,19 @@ func (k Keeper) OnTimeoutAggrKeyshareDataPacket(ctx sdk.Context, packet channelt
 
 	return nil
 }
+
+func (k Keeper) ProcessAggrKeyshare(ctx sdk.Context, pID string, aggrKeyshare string) error {
+	id, err := strconv.ParseUint(pID, 10, 64)
+	if err != nil {
+		return err
+	}
+
+	proposal, found := k.GetProposal(ctx, id)
+	if !found {
+		return errors.New("Proposal not found")
+	}
+
+	proposal.AggrKeyshare = aggrKeyshare
+	k.SetProposal(ctx, proposal)
+	return nil
+}

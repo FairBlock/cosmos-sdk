@@ -246,6 +246,7 @@ message Params {
 
   repeated TrustedCounterParty trusted_counter_parties = 17;
   string channel_id = 18;
+  bool is_source_chain = 19;
 }
 
 // DecryptedVoteOption is the structure to which the

@@ -94,6 +94,8 @@ func (keeper Keeper) SubmitProposal(ctx sdk.Context, messages []sdk.Msg, metadat
 		return v1.Proposal{}, err
 	}
 
+	params := keeper.GetParams(ctx)
+
 	keeper.SetProposal(ctx, proposal)
 	keeper.InsertInactiveProposalQueue(ctx, proposalID, *proposal.DepositEndTime)
 	keeper.SetProposalID(ctx, proposalID+1)
@@ -101,10 +103,32 @@ func (keeper Keeper) SubmitProposal(ctx sdk.Context, messages []sdk.Msg, metadat
 	// called right after a proposal is submitted
 	keeper.Hooks().AfterProposalSubmission(ctx, proposalID)
 
+	// Directly make request to keyshare module if sourcechain (fairyring)
+	if params.IsSourceChain {
+		req := kstypes.MsgRequestAggrKeyshare{
+			Id: &kstypes.MsgRequestAggrKeyshare_ProposalId{
+				ProposalId: strconv.FormatUint(proposalID, 10),
+			},
+		}
+
+		rsp, err := keeper.keyshareKeeper.ProcessKeyshareRequest(ctx, &req)
+		if err != nil {
+			proposal.Identity = rsp.GetIdentity()
+			proposal.Pubkey = rsp.GetPubkey()
+
+			keeper.SetProposal(ctx, proposal)
+			return proposal, nil
+		}
+	}
+
+	// else, make ibc tx to source chain
 	var packetData kstypes.RequestAggrKeysharePacketData
 	sPort := keeper.GetPort(ctx)
-	params := keeper.GetParams(ctx)
-	packetData.ProposalId = strconv.FormatUint(proposalID, 10)
+	packetData = kstypes.RequestAggrKeysharePacketData{
+		Id: &kstypes.RequestAggrKeysharePacketData_ProposalId{
+			ProposalId: strconv.FormatUint(proposalID, 10),
+		},
+	}
 	timeoutTimestamp := ctx.BlockTime().Add(time.Second * 20).UnixNano()
 
 	_, _ = keeper.TransmitRequestAggrKeysharePacket(ctx,
@@ -306,5 +330,14 @@ func (keeper Keeper) UnmarshalProposal(bz []byte, proposal *v1.Proposal) error {
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+func (keeper Keeper) GetAggrKeyshare(ctx sdk.Context, req kstypes.MsgGetAggrKeyshare) error {
+	_, err := keeper.keyshareKeeper.ProcessGetKeyshareRequest(ctx, &req)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }

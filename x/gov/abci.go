@@ -98,10 +98,27 @@ func EndBlocker(ctx sdk.Context, keeper *keeper.Keeper) {
 			if proposal.Status == v1.StatusVotingPeriod {
 				proposal.Status = v1.StatusTallyPeriod
 				keeper.SetProposal(ctx, proposal)
+				params := keeper.GetParams(ctx)
 
+				// Directly make request to keyshare module if sourcechain (fairyring)
+				if params.IsSourceChain {
+					req := kstypes.MsgGetAggrKeyshare{
+						Identity: proposal.Identity,
+					}
+					err := keeper.GetAggrKeyshare(ctx, req)
+					if err != nil {
+						logger.Info(
+							"Request to fetch aggr. Keyshare failed",
+							"proposal", proposal.Id,
+							"error", err,
+						)
+					}
+					return false
+				}
+
+				// else, make ibc tx to source chain
 				var packetData kstypes.GetAggrKeysharePacketData
 				sPort := keeper.GetPort(ctx)
-				params := keeper.GetParams(ctx)
 				packetData.Identity = proposal.Identity
 				timeoutTimestamp := ctx.BlockTime().Add(time.Second * 20).UnixNano()
 

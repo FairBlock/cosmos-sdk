@@ -114,3 +114,22 @@ func (k IBCKeeper) AuthenticateCapability(ctx sdk.Context, cap *capabilitytypes.
 func (k IBCKeeper) ClaimCapability(ctx sdk.Context, cap *capabilitytypes.Capability, name string) error {
 	return k.ScopedKeeper.ClaimCapability(ctx, cap, name)
 }
+
+// // KeyshareKeeper is used to make requests directly to keyshare module on source chain
+// type KeyshareKeeper interface {
+// 	ProcessKeyshareRequest(ctx sdk.Context, msg MsgRequestAggrKeyshare) (rsp MsgRequestAggrKeyshareResponse, err error)
+// 	ProcessGetKeyshareRequest(ctx sdk.Context, msg MsgGetAggrKeyshare) (rsp MsgGetAggrKeyshareResponse, err error)
+// }
+
+// type MsgRequestAggrKeyshare interface {
+// 	GetProposalId() string
+// 	GetRequestId() string
+// }
+// type MsgRequestAggrKeyshareResponse interface {
+// 	GetIdentity() string
+// 	GetPubkey() string
+// }
+// type MsgGetAggrKeyshare interface {
+// 	GetIdentity() string
+// }
+// type MsgGetAggrKeyshareResponse interface{}

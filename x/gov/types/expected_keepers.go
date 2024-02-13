@@ -3,7 +3,7 @@ package types
 import (
 	"cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/auth/types"
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 )
 
@@ -29,13 +29,13 @@ type StakingKeeper interface {
 
 // AccountKeeper defines the expected account keeper (noalias)
 type AccountKeeper interface {
-	GetAccount(ctx sdk.Context, addr sdk.AccAddress) types.AccountI
+	GetAccount(ctx sdk.Context, addr sdk.AccAddress) authtypes.AccountI
 
 	GetModuleAddress(name string) sdk.AccAddress
-	GetModuleAccount(ctx sdk.Context, name string) types.ModuleAccountI
+	GetModuleAccount(ctx sdk.Context, name string) authtypes.ModuleAccountI
 
 	// TODO remove with genesis 2-phases refactor https://github.com/cosmos/cosmos-sdk/issues/2862
-	SetModuleAccount(sdk.Context, types.ModuleAccountI)
+	SetModuleAccount(sdk.Context, authtypes.ModuleAccountI)
 }
 
 // BankKeeper defines the expected interface needed to retrieve account balances.
@@ -48,6 +48,37 @@ type BankKeeper interface {
 	SendCoinsFromModuleToAccount(ctx sdk.Context, senderModule string, recipientAddr sdk.AccAddress, amt sdk.Coins) error
 	SendCoinsFromAccountToModule(ctx sdk.Context, senderAddr sdk.AccAddress, recipientModule string, amt sdk.Coins) error
 	BurnCoins(ctx sdk.Context, name string, amt sdk.Coins) error
+}
+
+// KeyshareKeeper is used to make requests directly to keyshare module on source chain
+type KeyshareKeeper interface {
+	ProcessKeyshareRequest(ctx sdk.Context, msg MsgRequestAggrKeyshare) (rsp MsgRequestAggrKeyshareResponse, err error)
+	ProcessGetKeyshareRequest(ctx sdk.Context, msg MsgGetAggrKeyshare) (rsp MsgGetAggrKeyshareResponse, err error)
+}
+
+type MsgRequestAggrKeyshare interface {
+	GetProposalId() string
+	GetRequestId() string
+}
+
+type MsgRequestAggrKeyshareResponse interface {
+	GetIdentity() string
+	GetPubkey() string
+}
+
+type MsgGetAggrKeyshare interface {
+	GetIdentity() string
+}
+
+type MsgGetAggrKeyshareResponse interface{}
+
+type AggrKeyshareData interface {
+	GetIdentity() string
+	GetPubkey() string
+	GetAggrKeyshare() string
+	GetAggrHeight() string
+	GetProposalId() string
+	GetRequestId() string
 }
 
 // Event Hooks

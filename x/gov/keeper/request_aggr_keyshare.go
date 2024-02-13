@@ -55,7 +55,7 @@ func (k Keeper) OnAcknowledgementRequestAggrKeysharePacket(ctx sdk.Context, pack
 			return errors.New("cannot unmarshal acknowledgment")
 		}
 
-		pID, _ := strconv.ParseUint(data.ProposalId, 10, 64)
+		pID, _ := strconv.ParseUint(data.GetProposalId(), 10, 64)
 		proposal, found := k.GetProposal(ctx, pID)
 		if !found {
 			return errors.New("Proposal not found")
@@ -74,7 +74,7 @@ func (k Keeper) OnAcknowledgementRequestAggrKeysharePacket(ctx sdk.Context, pack
 
 // OnTimeoutRequestAggrKeysharePacket responds to the case where a packet has not been transmitted because of a timeout
 func (k Keeper) OnTimeoutRequestAggrKeysharePacket(ctx sdk.Context, packet channeltypes.Packet, data kstypes.RequestAggrKeysharePacketData) error {
-	pID, _ := strconv.ParseUint(data.ProposalId, 10, 64)
+	pID, _ := strconv.ParseUint(data.GetProposalId(), 10, 64)
 	proposal, found := k.GetProposal(ctx, pID)
 	if !found {
 		return errors.New("Proposal not found")
