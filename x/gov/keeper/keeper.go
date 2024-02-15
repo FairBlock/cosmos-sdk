@@ -246,3 +246,8 @@ func (keeper Keeper) assertMetadataLength(metadata string) error {
 	}
 	return nil
 }
+
+func (keeper *Keeper) SetKSKeeper(ksKeeper types.KeyshareKeeper) *Keeper {
+	keeper.keyshareKeeper = ksKeeper
+	return keeper
+}

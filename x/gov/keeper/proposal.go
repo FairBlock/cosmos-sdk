@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	commontypes "fairyring/x/common/types"
 	kstypes "fairyring/x/keyshare/types"
 
 	"github.com/cosmos/cosmos-sdk/client"
@@ -105,13 +106,13 @@ func (keeper Keeper) SubmitProposal(ctx sdk.Context, messages []sdk.Msg, metadat
 
 	// Directly make request to keyshare module if sourcechain (fairyring)
 	if params.IsSourceChain {
-		req := kstypes.MsgRequestAggrKeyshare{
-			Id: &kstypes.MsgRequestAggrKeyshare_ProposalId{
+		req := commontypes.MsgRequestAggrKeyshare{
+			Id: &commontypes.MsgRequestAggrKeyshare_ProposalId{
 				ProposalId: strconv.FormatUint(proposalID, 10),
 			},
 		}
 
-		rsp, err := keeper.keyshareKeeper.ProcessKeyshareRequest(ctx, &req)
+		rsp, err := keeper.keyshareKeeper.ProcessKeyshareRequest(ctx, req)
 		if err != nil {
 			proposal.Identity = rsp.GetIdentity()
 			proposal.Pubkey = rsp.GetPubkey()
@@ -333,8 +334,8 @@ func (keeper Keeper) UnmarshalProposal(bz []byte, proposal *v1.Proposal) error {
 	return nil
 }
 
-func (keeper Keeper) GetAggrKeyshare(ctx sdk.Context, req kstypes.MsgGetAggrKeyshare) error {
-	_, err := keeper.keyshareKeeper.ProcessGetKeyshareRequest(ctx, &req)
+func (keeper Keeper) GetAggrKeyshare(ctx sdk.Context, req commontypes.MsgGetAggrKeyshare) error {
+	_, err := keeper.keyshareKeeper.ProcessGetKeyshareRequest(ctx, req)
 	if err != nil {
 		return err
 	}

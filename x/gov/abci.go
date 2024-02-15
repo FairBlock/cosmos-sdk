@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	commontypes "fairyring/x/common/types"
 	kstypes "fairyring/x/keyshare/types"
 
 	"github.com/cosmos/cosmos-sdk/telemetry"
@@ -102,7 +103,7 @@ func EndBlocker(ctx sdk.Context, keeper *keeper.Keeper) {
 
 				// Directly make request to keyshare module if sourcechain (fairyring)
 				if params.IsSourceChain {
-					req := kstypes.MsgGetAggrKeyshare{
+					req := commontypes.MsgGetAggrKeyshare{
 						Identity: proposal.Identity,
 					}
 					err := keeper.GetAggrKeyshare(ctx, req)

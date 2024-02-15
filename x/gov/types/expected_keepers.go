@@ -1,6 +1,8 @@
 package types
 
 import (
+	commontypes "fairyring/x/common/types"
+
 	"cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
@@ -52,33 +54,8 @@ type BankKeeper interface {
 
 // KeyshareKeeper is used to make requests directly to keyshare module on source chain
 type KeyshareKeeper interface {
-	ProcessKeyshareRequest(ctx sdk.Context, msg MsgRequestAggrKeyshare) (rsp MsgRequestAggrKeyshareResponse, err error)
-	ProcessGetKeyshareRequest(ctx sdk.Context, msg MsgGetAggrKeyshare) (rsp MsgGetAggrKeyshareResponse, err error)
-}
-
-type MsgRequestAggrKeyshare interface {
-	GetProposalId() string
-	GetRequestId() string
-}
-
-type MsgRequestAggrKeyshareResponse interface {
-	GetIdentity() string
-	GetPubkey() string
-}
-
-type MsgGetAggrKeyshare interface {
-	GetIdentity() string
-}
-
-type MsgGetAggrKeyshareResponse interface{}
-
-type AggrKeyshareData interface {
-	GetIdentity() string
-	GetPubkey() string
-	GetAggrKeyshare() string
-	GetAggrHeight() string
-	GetProposalId() string
-	GetRequestId() string
+	ProcessKeyshareRequest(ctx sdk.Context, msg commontypes.MsgRequestAggrKeyshare) (rsp commontypes.MsgRequestAggrKeyshareResponse, err error)
+	ProcessGetKeyshareRequest(ctx sdk.Context, msg commontypes.MsgGetAggrKeyshare) (rsp commontypes.MsgGetAggrKeyshareResponse, err error)
 }
 
 // Event Hooks
