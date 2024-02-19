@@ -1,7 +1,7 @@
 package types
 
 import (
-	commontypes "fairyring/x/common/types"
+	commontypes "github.com/Fairblock/fairyring/x/common/types"
 
 	"cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"

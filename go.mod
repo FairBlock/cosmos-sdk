@@ -12,9 +12,9 @@ require (
 	cosmossdk.io/log v1.2.1
 	cosmossdk.io/math v1.1.2
 	cosmossdk.io/tools/rosetta v0.2.1
-	fairyring v0.0.1
 	github.com/99designs/keyring v1.2.1
 	github.com/FairBlock/DistributedIBE v0.0.0-20230528025616-f58fb2b93eaf
+	github.com/Fairblock/fairyring v0.0.1
 	github.com/armon/go-metrics v0.4.1
 	github.com/bgentry/speakeasy v0.1.1-0.20220910012023-760eaf8b6816
 	github.com/btcsuite/btcd/btcec/v2 v2.3.2
@@ -189,10 +189,10 @@ require (
 )
 
 replace (
-	// replace fairyring with local branch (to be replaced later)
-	fairyring => ../fairyring
 	// use cosmos fork of keyring
 	github.com/99designs/keyring => github.com/cosmos/keyring v1.2.0
+	// replace fairyring with local branch (to be replaced later)
+	github.com/Fairblock/fairyring => ../fairyring
 	// dgrijalva/jwt-go is deprecated and doesn't receive security updates.
 	// TODO: remove it: https://github.com/cosmos/cosmos-sdk/issues/13134
 	github.com/dgrijalva/jwt-go => github.com/golang-jwt/jwt/v4 v4.4.2

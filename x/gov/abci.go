@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	commontypes "fairyring/x/common/types"
-	kstypes "fairyring/x/keyshare/types"
+	commontypes "github.com/Fairblock/fairyring/x/common/types"
+	kstypes "github.com/Fairblock/fairyring/x/keyshare/types"
 
 	"github.com/cosmos/cosmos-sdk/telemetry"
 	sdk "github.com/cosmos/cosmos-sdk/types"
