@@ -113,11 +113,19 @@ func (keeper Keeper) SubmitProposal(ctx sdk.Context, messages []sdk.Msg, metadat
 		}
 
 		rsp, err := keeper.keyshareKeeper.ProcessKeyshareRequest(ctx, req)
-		if err != nil {
+		if err == nil {
 			proposal.Identity = rsp.GetIdentity()
 			proposal.Pubkey = rsp.GetPubkey()
 
 			keeper.SetProposal(ctx, proposal)
+
+			ctx.EventManager().EmitEvent(
+				sdk.NewEvent(
+					types.EventTypeSubmitProposal,
+					sdk.NewAttribute(types.AttributeKeyProposalID, fmt.Sprintf("%d", proposalID)),
+					sdk.NewAttribute(types.AttributeKeyProposalMessages, msgsStr),
+				),
+			)
 			return proposal, nil
 		}
 	}

@@ -101,6 +101,12 @@ func EndBlocker(ctx sdk.Context, keeper *keeper.Keeper) {
 				keeper.SetProposal(ctx, proposal)
 				params := keeper.GetParams(ctx)
 
+				ctx.EventManager().EmitEvent(
+					sdk.NewEvent(kstypes.StartSendGeneralKeyShareEventType,
+						sdk.NewAttribute(kstypes.StartSendGeneralKeyShareEventIdentity, proposal.Identity),
+					),
+				)
+
 				// Directly make request to keyshare module if sourcechain (fairyring)
 				if params.IsSourceChain {
 					req := commontypes.MsgGetAggrKeyshare{
