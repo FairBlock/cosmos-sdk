@@ -29,6 +29,11 @@ const (
 	ChannelID = "channel-0"
 )
 
+const (
+	ReqQueueKeyPrefix    = "ReqQueue/value/"
+	SignalQueueKeyPrefix = "SignalQueue/value/"
+)
+
 // Keys for governance store
 // Items are stored with the following key: values
 //
@@ -184,4 +189,15 @@ func splitKeyWithAddress(key []byte) (proposalID uint64, addr sdk.AccAddress) {
 	kv.AssertKeyAtLeastLength(key, 11)
 	addr = sdk.AccAddress(key[10:])
 	return
+}
+
+func QueueKey(
+	identity string,
+) []byte {
+	var key []byte
+
+	b := []byte(identity)
+	key = append(key, b...)
+
+	return key
 }

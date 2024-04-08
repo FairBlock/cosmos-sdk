@@ -46,9 +46,6 @@ type Keeper struct {
 	// the address capable of executing a MsgUpdateParams message. Typically, this
 	// should be the x/gov module account.
 	authority string
-
-	// KeyshareKeeper is used in the source (fairyring chain) to make the call directly
-	keyshareKeeper types.KeyshareKeeper
 }
 
 // GetAuthority returns the x/gov module's authority.
@@ -71,7 +68,6 @@ func NewKeeper(
 	portKeeper v1.PortKeeper,
 	scopedKeeper v1.ScopedKeeper,
 	connectionKeeper v1.ConnectionKeeper,
-	keyshareKeeper types.KeyshareKeeper,
 ) *Keeper {
 	// ensure governance module account is set
 	if addr := authKeeper.GetModuleAddress(types.ModuleName); addr == nil {
@@ -104,7 +100,6 @@ func NewKeeper(
 		router:           router,
 		config:           config,
 		authority:        authority,
-		keyshareKeeper:   keyshareKeeper,
 	}
 }
 
@@ -245,9 +240,4 @@ func (keeper Keeper) assertMetadataLength(metadata string) error {
 		return types.ErrMetadataTooLong.Wrapf("got metadata with length %d", len(metadata))
 	}
 	return nil
-}
-
-func (keeper *Keeper) SetKSKeeper(ksKeeper types.KeyshareKeeper) *Keeper {
-	keeper.keyshareKeeper = ksKeeper
-	return keeper
 }

@@ -2,6 +2,7 @@ package gov
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 
 	commontypes "github.com/Fairblock/fairyring/x/common/types"
@@ -109,17 +110,12 @@ func EndBlocker(ctx sdk.Context, keeper *keeper.Keeper) {
 
 				// Directly make request to keyshare module if sourcechain (fairyring)
 				if params.IsSourceChain {
-					req := commontypes.MsgGetAggrKeyshare{
+					req := commontypes.GetAggrKeyshare{
+						Id:       &commontypes.GetAggrKeyshare_ProposalId{ProposalId: strconv.FormatUint(proposal.Id, 10)},
 						Identity: proposal.Identity,
 					}
-					err := keeper.GetAggrKeyshare(ctx, req)
-					if err != nil {
-						logger.Info(
-							"Request to fetch aggr. Keyshare failed",
-							"proposal", proposal.Id,
-							"error", err,
-						)
-					}
+
+					keeper.SetSignalQueueEntry(ctx, req)
 					return false
 				}
 

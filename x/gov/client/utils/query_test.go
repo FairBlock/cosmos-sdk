@@ -83,8 +83,8 @@ func TestGetPaginatedVotes(t *testing.T) {
 				acc2Msgs[:1],
 			},
 			votes: []v1.Vote{
-				v1.NewVote(0, acc1, v1.NewNonSplitVoteOption(v1.OptionYes), ""),
-				v1.NewVote(0, acc2, v1.NewNonSplitVoteOption(v1.OptionYes), ""),
+				v1.NewVote(0, acc1, v1.NewNonSplitVoteOption(v1.OptionYes), "", ""),
+				v1.NewVote(0, acc2, v1.NewNonSplitVoteOption(v1.OptionYes), "", ""),
 			},
 		},
 		{
@@ -96,8 +96,8 @@ func TestGetPaginatedVotes(t *testing.T) {
 				acc2Msgs,
 			},
 			votes: []v1.Vote{
-				v1.NewVote(0, acc1, v1.NewNonSplitVoteOption(v1.OptionYes), ""),
-				v1.NewVote(0, acc1, v1.NewNonSplitVoteOption(v1.OptionYes), ""),
+				v1.NewVote(0, acc1, v1.NewNonSplitVoteOption(v1.OptionYes), "", ""),
+				v1.NewVote(0, acc1, v1.NewNonSplitVoteOption(v1.OptionYes), "", ""),
 			},
 		},
 		{
@@ -109,8 +109,8 @@ func TestGetPaginatedVotes(t *testing.T) {
 				acc2Msgs,
 			},
 			votes: []v1.Vote{
-				v1.NewVote(0, acc2, v1.NewNonSplitVoteOption(v1.OptionYes), ""),
-				v1.NewVote(0, acc2, v1.NewNonSplitVoteOption(v1.OptionYes), ""),
+				v1.NewVote(0, acc2, v1.NewNonSplitVoteOption(v1.OptionYes), "", ""),
+				v1.NewVote(0, acc2, v1.NewNonSplitVoteOption(v1.OptionYes), "", ""),
 			},
 		},
 		{
@@ -120,7 +120,7 @@ func TestGetPaginatedVotes(t *testing.T) {
 			msgs: [][]sdk.Msg{
 				acc1Msgs[:1],
 			},
-			votes: []v1.Vote{v1.NewVote(0, acc1, v1.NewNonSplitVoteOption(v1.OptionYes), "")},
+			votes: []v1.Vote{v1.NewVote(0, acc1, v1.NewNonSplitVoteOption(v1.OptionYes), "", "")},
 		},
 		{
 			description: "InvalidPage",

@@ -106,28 +106,22 @@ func (keeper Keeper) SubmitProposal(ctx sdk.Context, messages []sdk.Msg, metadat
 
 	// Directly make request to keyshare module if sourcechain (fairyring)
 	if params.IsSourceChain {
-		req := commontypes.MsgRequestAggrKeyshare{
-			Id: &commontypes.MsgRequestAggrKeyshare_ProposalId{
+		req := commontypes.RequestAggrKeyshare{
+			Id: &commontypes.RequestAggrKeyshare_ProposalId{
 				ProposalId: strconv.FormatUint(proposalID, 10),
 			},
 		}
 
-		rsp, err := keeper.keyshareKeeper.ProcessKeyshareRequest(ctx, req)
-		if err == nil {
-			proposal.Identity = rsp.GetIdentity()
-			proposal.Pubkey = rsp.GetPubkey()
+		keeper.SetReqQueueEntry(ctx, req)
 
-			keeper.SetProposal(ctx, proposal)
-
-			ctx.EventManager().EmitEvent(
-				sdk.NewEvent(
-					types.EventTypeSubmitProposal,
-					sdk.NewAttribute(types.AttributeKeyProposalID, fmt.Sprintf("%d", proposalID)),
-					sdk.NewAttribute(types.AttributeKeyProposalMessages, msgsStr),
-				),
-			)
-			return proposal, nil
-		}
+		ctx.EventManager().EmitEvent(
+			sdk.NewEvent(
+				types.EventTypeSubmitProposal,
+				sdk.NewAttribute(types.AttributeKeyProposalID, fmt.Sprintf("%d", proposalID)),
+				sdk.NewAttribute(types.AttributeKeyProposalMessages, msgsStr),
+			),
+		)
+		return proposal, nil
 	}
 
 	// else, make ibc tx to source chain
@@ -339,14 +333,5 @@ func (keeper Keeper) UnmarshalProposal(bz []byte, proposal *v1.Proposal) error {
 	if err != nil {
 		return err
 	}
-	return nil
-}
-
-func (keeper Keeper) GetAggrKeyshare(ctx sdk.Context, req commontypes.MsgGetAggrKeyshare) error {
-	_, err := keeper.keyshareKeeper.ProcessGetKeyshareRequest(ctx, req)
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
