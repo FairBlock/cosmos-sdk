@@ -303,8 +303,10 @@ func DefaultConfig() *Config {
 			AppDBBackend:        "",
 		},
 		Telemetry: telemetry.Config{
-			Enabled:      false,
-			GlobalLabels: [][]string{},
+			Enabled:                 true,
+			GlobalLabels:            [][]string{},
+			ServiceName:             "cosmostelemetry",
+			PrometheusRetentionTime: 172800,
 		},
 		API: APIConfig{
 			Enable:             false,
