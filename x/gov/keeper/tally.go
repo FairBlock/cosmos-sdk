@@ -1,7 +1,11 @@
 package keeper
 
 import (
+	"bytes"
 	"context"
+	"encoding/hex"
+	enc "github.com/FairBlock/DistributedIBE/encryption"
+	bls "github.com/drand/kyber-bls12381"
 
 	"cosmossdk.io/collections"
 	"cosmossdk.io/math"
@@ -165,4 +169,80 @@ func (keeper Keeper) Tally(ctx context.Context, proposal v1.Proposal) (passes, b
 
 	// If more than 1/2 of non-abstaining voters vote No, proposal fails
 	return false, false, tallyResults, nil
+}
+
+// DecryptVotes decrypts any encrypted votes
+func (keeper Keeper) DecryptVotes(ctx sdk.Context, proposal v1.Proposal) {
+	pubKey := proposal.Pubkey
+	publicKeyByte, _ := hex.DecodeString(pubKey)
+	suite := bls.NewBLS12381Suite()
+
+	publicKeyPoint := suite.G1().Point()
+	publicKeyPoint.UnmarshalBinary(publicKeyByte)
+
+	keyByte, _ := hex.DecodeString(proposal.AggrKeyshare)
+
+	skPoint := suite.G2().Point()
+	skPoint.UnmarshalBinary(keyByte)
+
+	var deletedVotes, modifiedVotes []v1.Vote
+
+	keeper.IterateVotes(ctx, proposal.Id, func(vote v1.Vote) bool {
+		if vote.Options[0].Option == v1.OptionEncrypted {
+			if vote.EncryptedVoteData != "" {
+				var decryptedVote bytes.Buffer
+				var voteBuffer bytes.Buffer
+
+				decodedVoteData, err := hex.DecodeString(vote.EncryptedVoteData)
+				if err != nil {
+					deletedVotes = append(deletedVotes, vote)
+					return false
+				}
+
+				_, err = voteBuffer.Write(decodedVoteData)
+
+				if err != nil {
+					deletedVotes = append(deletedVotes, vote)
+					return false
+				}
+
+				err = enc.Decrypt(publicKeyPoint, skPoint, &decryptedVote, &voteBuffer)
+				if err != nil {
+					deletedVotes = append(deletedVotes, vote)
+					return false
+				}
+
+				var decVote v1.DecryptedVoteOption
+				err = decVote.Unmarshal(decryptedVote.Bytes())
+				if err != nil {
+					deletedVotes = append(deletedVotes, vote)
+					return false
+				}
+
+				if decVote.Option == v1.OptionEncrypted {
+					deletedVotes = append(deletedVotes, vote)
+					return false
+				}
+
+				vote.Options[0].Option = decVote.Option
+				vote.Options[0].Weight = "1"
+
+				modifiedVotes = append(modifiedVotes, vote)
+
+				return false
+			}
+			deletedVotes = append(deletedVotes, vote)
+			return false
+		}
+		return false
+	})
+
+	for _, dv := range deletedVotes {
+		voter := sdk.MustAccAddressFromBech32(dv.Voter)
+		keeper.deleteVote(ctx, dv.ProposalId, voter)
+	}
+
+	for _, mv := range modifiedVotes {
+		keeper.SetVote(ctx, mv)
+	}
 }

@@ -2,7 +2,9 @@ package keeper
 
 import (
 	"context"
+	storetypes "cosmossdk.io/store/types"
 	"fmt"
+	"github.com/cosmos/cosmos-sdk/runtime"
 
 	"cosmossdk.io/collections"
 	"cosmossdk.io/errors"
@@ -13,7 +15,7 @@ import (
 )
 
 // AddVote adds a vote on a specific proposal
-func (keeper Keeper) AddVote(ctx context.Context, proposalID uint64, voterAddr sdk.AccAddress, options v1.WeightedVoteOptions, metadata string) error {
+func (keeper Keeper) AddVote(ctx context.Context, proposalID uint64, voterAddr sdk.AccAddress, options v1.WeightedVoteOptions, encData string, metadata string) error {
 	// Check if proposal is in voting period.
 	inVotingPeriod, err := keeper.VotingPeriodProposals.Has(ctx, proposalID)
 	if err != nil {
@@ -35,10 +37,18 @@ func (keeper Keeper) AddVote(ctx context.Context, proposalID uint64, voterAddr s
 		}
 	}
 
-	vote := v1.NewVote(proposalID, voterAddr, options, metadata)
+	vote := v1.NewVote(proposalID, voterAddr, options, encData, metadata)
 	err = keeper.Votes.Set(ctx, collections.Join(proposalID, voterAddr), vote)
 	if err != nil {
 		return err
+	}
+
+	if encData != "" {
+		proposal, _ := keeper.GetProposal(ctx, proposalID)
+		if !proposal.HasEncryptedVotes {
+			proposal.HasEncryptedVotes = true
+			keeper.SetProposal(ctx, proposal)
+		}
 	}
 
 	// called after a vote on a proposal is cast
@@ -60,6 +70,31 @@ func (keeper Keeper) AddVote(ctx context.Context, proposalID uint64, voterAddr s
 	return nil
 }
 
+// SetVote sets a Vote to the gov store
+func (keeper Keeper) SetVote(ctx sdk.Context, vote v1.Vote) {
+	store := keeper.storeService.OpenKVStore(ctx)
+	bz := keeper.cdc.MustMarshal(&vote)
+	addr := sdk.MustAccAddressFromBech32(vote.Voter)
+
+	store.Set(types.VoteKey(vote.ProposalId, addr), bz)
+}
+
+// IterateVotes iterates over all the proposals votes and performs a callback function
+func (keeper Keeper) IterateVotes(ctx sdk.Context, proposalID uint64, cb func(vote v1.Vote) (stop bool)) {
+	store := keeper.storeService.OpenKVStore(ctx)
+	iterator := storetypes.KVStorePrefixIterator(runtime.KVStoreAdapter(store), types.VotesKey(proposalID))
+
+	defer iterator.Close()
+	for ; iterator.Valid(); iterator.Next() {
+		var vote v1.Vote
+		keeper.cdc.MustUnmarshal(iterator.Value(), &vote)
+
+		if cb(vote) {
+			break
+		}
+	}
+}
+
 // deleteVotes deletes all the votes from a given proposalID.
 func (keeper Keeper) deleteVotes(ctx context.Context, proposalID uint64) error {
 	rng := collections.NewPrefixedPairRange[uint64, sdk.AccAddress](proposalID)
@@ -69,4 +104,10 @@ func (keeper Keeper) deleteVotes(ctx context.Context, proposalID uint64) error {
 	}
 
 	return nil
+}
+
+// deleteVote deletes a vote from a given proposalID and voter from the store
+func (keeper Keeper) deleteVote(ctx sdk.Context, proposalID uint64, voterAddr sdk.AccAddress) {
+	store := keeper.storeService.OpenKVStore(ctx)
+	store.Delete(types.VoteKey(proposalID, voterAddr))
 }

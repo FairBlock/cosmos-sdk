@@ -37,4 +37,6 @@ message GenesisState {
   //
   // Since: cosmos-sdk 0.50
   string constitution = 9;
+
+  string port_id = 10;
 }

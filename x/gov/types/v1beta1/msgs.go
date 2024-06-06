@@ -2,17 +2,20 @@ package v1beta1
 
 import (
 	"fmt"
-
-	"github.com/cosmos/gogoproto/proto"
-
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	"github.com/cosmos/cosmos-sdk/x/gov/codec"
+	"github.com/cosmos/cosmos-sdk/x/gov/types"
+	"github.com/cosmos/gogoproto/proto"
+	"sigs.k8s.io/yaml"
 )
 
 // Governance message types and routes
 const (
 	TypeMsgDeposit        = "deposit"
 	TypeMsgVote           = "vote"
+	TypeMsgVoteEncrypted  = "encrypted_vote"
 	TypeMsgVoteWeighted   = "weighted_vote"
 	TypeMsgSubmitProposal = "submit_proposal"
 )
@@ -86,6 +89,46 @@ func NewMsgDeposit(depositor sdk.AccAddress, proposalID uint64, amount sdk.Coins
 // NewMsgVote creates a message to cast a vote on an active proposal
 func NewMsgVote(voter sdk.AccAddress, proposalID uint64, option VoteOption) *MsgVote {
 	return &MsgVote{proposalID, voter.String(), option}
+}
+
+// NewMsgVoteEncrypted creates a message to cast an encrypted vote on an active proposal
+//
+//nolint:interfacer
+func NewMsgVoteEncrypted(voter sdk.AccAddress, proposalID uint64, encData string) *MsgVoteEncrypted {
+	return &MsgVoteEncrypted{proposalID, voter.String(), encData}
+}
+
+// Route implements the sdk.Msg interface.
+func (msg MsgVoteEncrypted) Route() string { return types.RouterKey }
+
+// Type implements the sdk.Msg interface.
+func (msg MsgVoteEncrypted) Type() string { return TypeMsgVoteEncrypted }
+
+// ValidateBasic implements the sdk.Msg interface.
+func (msg MsgVoteEncrypted) ValidateBasic() error {
+	if _, err := sdk.AccAddressFromBech32(msg.Voter); err != nil {
+		return sdkerrors.ErrInvalidAddress.Wrapf("invalid voter address: %s", err)
+	}
+
+	return nil
+}
+
+// String implements the Stringer interface
+func (msg MsgVoteEncrypted) String() string {
+	out, _ := yaml.Marshal(msg)
+	return string(out)
+}
+
+// GetSignBytes returns the message bytes to sign over.
+func (msg MsgVoteEncrypted) GetSignBytes() []byte {
+	bz := codec.ModuleCdc.MustMarshalJSON(&msg)
+	return sdk.MustSortJSON(bz)
+}
+
+// GetSigners returns the expected signers for a MsgVote.
+func (msg MsgVoteEncrypted) GetSigners() []sdk.AccAddress {
+	voter, _ := sdk.AccAddressFromBech32(msg.Voter)
+	return []sdk.AccAddress{voter}
 }
 
 // NewMsgVoteWeighted creates a message to cast a vote on an active proposal.

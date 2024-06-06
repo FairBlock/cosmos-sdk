@@ -68,6 +68,7 @@ func NewTxCmd(legacyPropCmds []*cobra.Command) *cobra.Command {
 	govTxCmd.AddCommand(
 		NewCmdDeposit(),
 		NewCmdVote(),
+		NewCmdVoteEncrypted(),
 		NewCmdWeightedVote(),
 		NewCmdSubmitProposal(),
 		NewCmdDraftProposal(),
@@ -342,6 +343,54 @@ $ %s tx gov vote 1 yes --from mykey
 
 			// Build vote message and run basic validation
 			msg := v1.NewMsgVote(from, proposalID, byteVoteOption, metadata)
+
+			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+		},
+	}
+
+	cmd.Flags().String(FlagMetadata, "", "Specify metadata of the vote")
+	flags.AddTxFlagsToCmd(cmd)
+
+	return cmd
+}
+
+// NewCmdVoteEncrypted implements creating a new encrypted vote command.
+func NewCmdVoteEncrypted() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "vote-encrypted [proposal-id] [encrypted data]",
+		Args:  cobra.ExactArgs(2),
+		Short: "Vote for an active proposal with encrypted option",
+		Long: strings.TrimSpace(
+			fmt.Sprintf(`Submit an encrypted vote for an active proposal. You can
+find the proposal-id by running "%s query gov proposals".
+
+Example:
+$ %s tx gov vote-encrypted 1 <encrypted_data> --from mykey
+`,
+				version.AppName, version.AppName,
+			),
+		),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+			// Get voting address
+			from := clientCtx.GetFromAddress()
+
+			// validate that the proposal id is a uint
+			proposalID, err := strconv.ParseUint(args[0], 10, 64)
+			if err != nil {
+				return fmt.Errorf("proposal-id %s not a valid int, please input a valid proposal-id", args[0])
+			}
+
+			metadata, err := cmd.Flags().GetString(FlagMetadata)
+			if err != nil {
+				return err
+			}
+
+			// Build vote message and run basic validation
+			msg := v1.NewMsgVoteEncrypted(from, proposalID, args[1], metadata)
 
 			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
 		},

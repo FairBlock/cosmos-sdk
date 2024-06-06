@@ -26,9 +26,9 @@ done
 cd ..
 
 # generate tests proto code
-(cd testutil/testdata; buf generate)
-(cd baseapp/testutil; buf generate)
-(cd tests/integration/tx/internal; make codegen)
+#(cd testutil/testdata; buf generate)
+#(cd baseapp/testutil; buf generate)
+#(cd tests/integration/tx/internal; make codegen)
 
 # move proto files to the right places
 cp -r github.com/cosmos/cosmos-sdk/* ./
@@ -37,4 +37,4 @@ rm -rf github.com cosmossdk.io
 
 go mod tidy
 
-./scripts/protocgen-pulsar.sh
+#./scripts/protocgen-pulsar.sh

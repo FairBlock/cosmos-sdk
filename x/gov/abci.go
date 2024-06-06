@@ -3,6 +3,10 @@ package gov
 import (
 	"errors"
 	"fmt"
+	commontypes "github.com/Fairblock/fairyring/x/common/types"
+	kstypes "github.com/Fairblock/fairyring/x/keyshare/types"
+	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
+	"strconv"
 	"time"
 
 	"cosmossdk.io/collections"
@@ -125,6 +129,98 @@ func EndBlocker(ctx sdk.Context, keeper *keeper.Keeper) error {
 		passes, burnDeposits, tallyResults, err := keeper.Tally(ctx, proposal)
 		if err != nil {
 			return false, err
+		}
+
+		tallyPeriod := keeper.GetParams(ctx).MaxTallyPeriod
+		tallyEndTime := proposal.VotingEndTime.Add(*tallyPeriod)
+
+		fmt.Println("\n\n\nVoting period ended for Proposal: ", proposal.Id)
+		fmt.Println("Proposal aggr keyshare: ", proposal.AggrKeyshare)
+
+		if proposal.HasEncryptedVotes {
+			fmt.Println("\n\n Proposal has encrypted votes")
+
+			if proposal.AggrKeyshare == "" && (ctx.BlockTime().Compare(tallyEndTime) >= 0) {
+				fmt.Println("\n\n Proposal tally period is over")
+				proposal.Status = v1.StatusFailed
+				tagValue = types.AttributeValueProposalFailed
+				logMsg = "failed"
+
+				keeper.RefundAndDeleteDeposits(ctx, proposal.Id)
+
+				keeper.SetProposal(ctx, proposal)
+				keeper.RemoveFromActiveProposalQueue(ctx, proposal.Id, *proposal.VotingEndTime)
+
+				// when proposal become active
+				keeper.Hooks().AfterProposalVotingPeriodEnded(ctx, proposal.Id)
+
+				logger.Info(
+					"proposal tallied",
+					"proposal", proposal.Id,
+					"results", logMsg,
+				)
+
+				ctx.EventManager().EmitEvent(
+					sdk.NewEvent(
+						types.EventTypeActiveProposal,
+						sdk.NewAttribute(types.AttributeKeyProposalID, fmt.Sprintf("%d", proposal.Id)),
+						sdk.NewAttribute(types.AttributeKeyProposalResult, tagValue),
+					),
+				)
+				return false, nil
+			}
+
+			if proposal.Status == v1.StatusVotingPeriod {
+				proposal.Status = v1.StatusTallyPeriod
+				keeper.SetProposal(ctx, proposal)
+				params := keeper.GetParams(ctx)
+
+				ctx.EventManager().EmitEvent(
+					sdk.NewEvent(kstypes.StartSendGeneralKeyShareEventType,
+						sdk.NewAttribute(kstypes.StartSendGeneralKeyShareEventIdentity, proposal.Identity),
+					),
+				)
+
+				// Directly make request to keyshare module if sourcechain (fairyring)
+				if params.IsSourceChain {
+					req := commontypes.GetAggrKeyshare{
+						Id:       &commontypes.GetAggrKeyshare_ProposalId{ProposalId: strconv.FormatUint(proposal.Id, 10)},
+						Identity: proposal.Identity,
+					}
+
+					keeper.SetSignalQueueEntry(ctx, req)
+					return false, err
+				}
+
+				// else, make ibc tx to source chain
+				var packetData kstypes.GetAggrKeysharePacketData
+				sPort := keeper.GetPort(ctx)
+				packetData.Identity = proposal.Identity
+				timeoutTimestamp := ctx.BlockTime().Add(time.Second * 20).UnixNano()
+
+				_, err := keeper.TransmitGetAggrKeysharePacket(ctx,
+					packetData,
+					sPort,
+					params.ChannelId,
+					clienttypes.ZeroHeight(),
+					uint64(timeoutTimestamp),
+				)
+
+				if err != nil {
+					logger.Info(
+						"IBC Request to fetch aggr. Keyshare failed",
+						"proposal", proposal.Id,
+						"error", err,
+					)
+				}
+
+				return false, err
+			}
+			if proposal.AggrKeyshare != "" {
+				keeper.DecryptVotes(ctx, proposal)
+			} else {
+				return false, nil
+			}
 		}
 
 		// If an expedited proposal fails, we do not want to update

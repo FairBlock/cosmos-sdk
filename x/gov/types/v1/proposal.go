@@ -20,6 +20,7 @@ const (
 	StatusPassed        = ProposalStatus_PROPOSAL_STATUS_PASSED
 	StatusRejected      = ProposalStatus_PROPOSAL_STATUS_REJECTED
 	StatusFailed        = ProposalStatus_PROPOSAL_STATUS_FAILED
+	StatusTallyPeriod   = ProposalStatus_PROPOSAL_STATUS_TALLY_PERIOD
 )
 
 // NewProposal creates a new Proposal instance

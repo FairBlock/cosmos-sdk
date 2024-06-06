@@ -4,6 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/cosmos/cosmos-sdk/telemetry"
+	"github.com/hashicorp/go-metrics"
+	"strconv"
 
 	"cosmossdk.io/errors"
 	"cosmossdk.io/math"
@@ -184,12 +187,42 @@ func (k msgServer) Vote(goCtx context.Context, msg *v1.MsgVote) (*v1.MsgVoteResp
 	}
 
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	err = k.Keeper.AddVote(ctx, msg.ProposalId, accAddr, v1.NewNonSplitVoteOption(msg.Option), msg.Metadata)
+	err = k.Keeper.AddVote(ctx, msg.ProposalId, accAddr, v1.NewNonSplitVoteOption(msg.Option), "", msg.Metadata)
 	if err != nil {
 		return nil, err
 	}
 
 	return &v1.MsgVoteResponse{}, nil
+}
+
+// VoteEncrypted implements the MsgServer.VoteEncrypted method.
+func (k msgServer) VoteEncrypted(goCtx context.Context, msg *v1.MsgVoteEncrypted) (*v1.MsgVoteEncryptedResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	accAddr, err := sdk.AccAddressFromBech32(msg.Voter)
+	if err != nil {
+		return nil, err
+	}
+	err = k.Keeper.AddVote(
+		ctx,
+		msg.ProposalId,
+		accAddr,
+		v1.NewNonSplitVoteOption(v1.OptionEncrypted),
+		msg.EncryptedData,
+		msg.Metadata,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	defer telemetry.IncrCounterWithLabels(
+		[]string{govtypes.ModuleName, "vote"},
+		1,
+		[]metrics.Label{
+			telemetry.NewLabel("proposal_id", strconv.FormatUint(msg.ProposalId, 10)),
+		},
+	)
+
+	return &v1.MsgVoteEncryptedResponse{}, nil
 }
 
 // VoteWeighted implements the MsgServer.VoteWeighted method.
@@ -229,7 +262,7 @@ func (k msgServer) VoteWeighted(goCtx context.Context, msg *v1.MsgVoteWeighted) 
 	}
 
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	err := k.Keeper.AddVote(ctx, msg.ProposalId, accAddr, msg.Options, msg.Metadata)
+	err := k.Keeper.AddVote(ctx, msg.ProposalId, accAddr, msg.Options, "", msg.Metadata)
 	if err != nil {
 		return nil, err
 	}
@@ -345,6 +378,18 @@ func (k legacyMsgServer) Vote(goCtx context.Context, msg *v1beta1.MsgVote) (*v1b
 		return nil, err
 	}
 	return &v1beta1.MsgVoteResponse{}, nil
+}
+
+func (k legacyMsgServer) VoteEncrypted(goCtx context.Context, msg *v1beta1.MsgVoteEncrypted) (*v1beta1.MsgVoteEncryptedResponse, error) {
+	_, err := k.server.VoteEncrypted(goCtx, &v1.MsgVoteEncrypted{
+		ProposalId:    msg.ProposalId,
+		Voter:         msg.Voter,
+		EncryptedData: msg.EncryptedData,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &v1beta1.MsgVoteEncryptedResponse{}, nil
 }
 
 func (k legacyMsgServer) VoteWeighted(goCtx context.Context, msg *v1beta1.MsgVoteWeighted) (*v1beta1.MsgVoteWeightedResponse, error) {

@@ -5,6 +5,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	commontypes "github.com/Fairblock/fairyring/x/common/types"
+	kstypes "github.com/Fairblock/fairyring/x/keyshare/types"
+	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
+	"strconv"
 	"time"
 
 	"cosmossdk.io/collections"
@@ -119,6 +123,44 @@ func (keeper Keeper) SubmitProposal(ctx context.Context, messages []sdk.Msg, met
 		return v1.Proposal{}, err
 	}
 
+	// Directly make request to keyshare module if sourcechain (fairyring)
+	if params.IsSourceChain {
+		req := commontypes.RequestAggrKeyshare{
+			Id: &commontypes.RequestAggrKeyshare_ProposalId{
+				ProposalId: strconv.FormatUint(proposalID, 10),
+			},
+		}
+
+		keeper.SetReqQueueEntry(sdkCtx, req)
+
+		sdkCtx.EventManager().EmitEvent(
+			sdk.NewEvent(
+				types.EventTypeSubmitProposal,
+				sdk.NewAttribute(types.AttributeKeyProposalID, fmt.Sprintf("%d", proposalID)),
+				sdk.NewAttribute(types.AttributeKeyProposalMessages, msgsStr),
+			),
+		)
+		return proposal, nil
+	}
+
+	// else, make ibc tx to source chain
+	var packetData kstypes.RequestAggrKeysharePacketData
+	sPort := keeper.GetPort(sdkCtx)
+	packetData = kstypes.RequestAggrKeysharePacketData{
+		Id: &kstypes.RequestAggrKeysharePacketData_ProposalId{
+			ProposalId: strconv.FormatUint(proposalID, 10),
+		},
+	}
+	timeoutTimestamp := sdkCtx.BlockTime().Add(time.Second * 20).UnixNano()
+
+	_, _ = keeper.TransmitRequestAggrKeysharePacket(sdkCtx,
+		packetData,
+		sPort,
+		params.ChannelId,
+		clienttypes.ZeroHeight(),
+		uint64(timeoutTimestamp),
+	)
+
 	sdkCtx.EventManager().EmitEvent(
 		sdk.NewEvent(
 			types.EventTypeSubmitProposal,
@@ -210,6 +252,24 @@ func (keeper Keeper) SetProposal(ctx context.Context, proposal v1.Proposal) erro
 	return keeper.Proposals.Set(ctx, proposal.Id, proposal)
 }
 
+// GetProposal gets a proposal from store by ProposalID.
+// Panics if can't unmarshal the proposal.
+func (keeper Keeper) GetProposal(ctx context.Context, proposalID uint64) (v1.Proposal, bool) {
+	store := keeper.storeService.OpenKVStore(ctx)
+
+	bz, err := store.Get(types.ProposalKey(proposalID))
+	if bz == nil || err != nil {
+		return v1.Proposal{}, false
+	}
+
+	var proposal v1.Proposal
+	if err := keeper.UnmarshalProposal(bz, &proposal); err != nil {
+		panic(err)
+	}
+
+	return proposal, true
+}
+
 // DeleteProposal deletes a proposal from store.
 func (keeper Keeper) DeleteProposal(ctx context.Context, proposalID uint64) error {
 	proposal, err := keeper.Proposals.Get(ctx, proposalID)
@@ -268,4 +328,22 @@ func (keeper Keeper) ActivateVotingPeriod(ctx context.Context, proposal v1.Propo
 	}
 
 	return keeper.ActiveProposalsQueue.Set(ctx, collections.Join(*proposal.VotingEndTime, proposal.Id), proposal.Id)
+}
+
+// MarshalProposal marshals the proposal and returns binary encoded bytes.
+func (keeper Keeper) MarshalProposal(proposal v1.Proposal) ([]byte, error) {
+	bz, err := keeper.cdc.Marshal(&proposal)
+	if err != nil {
+		return nil, err
+	}
+	return bz, nil
+}
+
+// UnmarshalProposal unmarshals the proposal.
+func (keeper Keeper) UnmarshalProposal(bz []byte, proposal *v1.Proposal) error {
+	err := keeper.cdc.Unmarshal(bz, proposal)
+	if err != nil {
+		return err
+	}
+	return nil
 }

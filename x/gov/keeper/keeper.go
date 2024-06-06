@@ -2,7 +2,9 @@ package keeper
 
 import (
 	"context"
+	storetypes "cosmossdk.io/store/types"
 	"fmt"
+	db "github.com/cosmos/cosmos-db"
 	"time"
 
 	"cosmossdk.io/collections"
@@ -19,6 +21,7 @@ import (
 
 // Keeper defines the governance module Keeper
 type Keeper struct {
+	*v1.IBCKeeper
 	authKeeper  types.AccountKeeper
 	bankKeeper  types.BankKeeper
 	distrKeeper types.DistributionKeeper
@@ -74,7 +77,10 @@ func (k Keeper) GetAuthority() string {
 func NewKeeper(
 	cdc codec.Codec, storeService corestoretypes.KVStoreService, authKeeper types.AccountKeeper,
 	bankKeeper types.BankKeeper, sk types.StakingKeeper, distrKeeper types.DistributionKeeper,
-	router baseapp.MessageRouter, config types.Config, authority string,
+	router baseapp.MessageRouter, config types.Config, authority string, channelKeeper v1.ChannelKeeper,
+	portKeeper v1.PortKeeper,
+	scopedKeeper v1.ScopedKeeper,
+	connectionKeeper v1.ConnectionKeeper,
 ) *Keeper {
 	// ensure governance module account is set
 	if addr := authKeeper.GetModuleAddress(types.ModuleName); addr == nil {
@@ -92,6 +98,13 @@ func NewKeeper(
 
 	sb := collections.NewSchemaBuilder(storeService)
 	k := &Keeper{
+		IBCKeeper: v1.NewIBCKeeper(
+			types.PortKey,
+			storeService,
+			channelKeeper,
+			portKeeper,
+			scopedKeeper,
+		),
 		storeService:           storeService,
 		authKeeper:             authKeeper,
 		bankKeeper:             bankKeeper,
@@ -191,4 +204,91 @@ func (k Keeper) assertSummaryLength(summary string) error {
 		return types.ErrSummaryTooLong.Wrapf("got summary with length %d", len(summary))
 	}
 	return nil
+}
+
+// ProposalQueues
+
+// InsertActiveProposalQueue inserts a proposalID into the active proposal queue at endTime
+func (keeper Keeper) InsertActiveProposalQueue(ctx sdk.Context, proposalID uint64, endTime time.Time) {
+	store := keeper.storeService.OpenKVStore(ctx)
+	bz := types.GetProposalIDBytes(proposalID)
+	store.Set(types.ActiveProposalQueueKey(proposalID, endTime), bz)
+}
+
+// RemoveFromActiveProposalQueue removes a proposalID from the Active Proposal Queue
+func (keeper Keeper) RemoveFromActiveProposalQueue(ctx sdk.Context, proposalID uint64, endTime time.Time) {
+
+	store := keeper.storeService.OpenKVStore(ctx)
+	store.Delete(types.ActiveProposalQueueKey(proposalID, endTime))
+}
+
+// InsertInactiveProposalQueue inserts a proposalID into the inactive proposal queue at endTime
+func (keeper Keeper) InsertInactiveProposalQueue(ctx sdk.Context, proposalID uint64, endTime time.Time) {
+	store := keeper.storeService.OpenKVStore(ctx)
+	bz := types.GetProposalIDBytes(proposalID)
+	store.Set(types.InactiveProposalQueueKey(proposalID, endTime), bz)
+}
+
+// RemoveFromInactiveProposalQueue removes a proposalID from the Inactive Proposal Queue
+func (keeper Keeper) RemoveFromInactiveProposalQueue(ctx sdk.Context, proposalID uint64, endTime time.Time) {
+	store := keeper.storeService.OpenKVStore(ctx)
+	store.Delete(types.InactiveProposalQueueKey(proposalID, endTime))
+}
+
+// Iterators
+
+// IterateActiveProposalsQueue iterates over the proposals in the active proposal queue
+// and performs a callback function
+func (keeper Keeper) IterateActiveProposalsQueue(ctx sdk.Context, endTime time.Time, cb func(proposal v1.Proposal) (stop bool)) {
+	iterator, err := keeper.ActiveProposalQueueIterator(ctx, endTime)
+	if err != nil {
+		fmt.Sprintf("error on iterating active proposal queue: %s", err.Error())
+		return
+	}
+	defer iterator.Close()
+	for ; iterator.Valid(); iterator.Next() {
+		proposalID, _ := types.SplitActiveProposalQueueKey(iterator.Key())
+		proposal, found := keeper.GetProposal(ctx, proposalID)
+		if !found {
+			panic(fmt.Sprintf("proposal %d does not exist", proposalID))
+		}
+
+		if cb(proposal) {
+			break
+		}
+	}
+}
+
+// IterateInactiveProposalsQueue iterates over the proposals in the inactive proposal queue
+// and performs a callback function
+func (keeper Keeper) IterateInactiveProposalsQueue(ctx sdk.Context, endTime time.Time, cb func(proposal v1.Proposal) (stop bool)) {
+	iterator, err := keeper.InactiveProposalQueueIterator(ctx, endTime)
+	if err != nil {
+		fmt.Sprintf("error on iterating inactive proposal queue: %s", err.Error())
+		return
+	}
+	defer iterator.Close()
+	for ; iterator.Valid(); iterator.Next() {
+		proposalID, _ := types.SplitInactiveProposalQueueKey(iterator.Key())
+		proposal, found := keeper.GetProposal(ctx, proposalID)
+		if !found {
+			panic(fmt.Sprintf("proposal %d does not exist", proposalID))
+		}
+
+		if cb(proposal) {
+			break
+		}
+	}
+}
+
+// ActiveProposalQueueIterator returns an sdk.Iterator for all the proposals in the Active Queue that expire by endTime
+func (keeper Keeper) ActiveProposalQueueIterator(ctx sdk.Context, endTime time.Time) (db.Iterator, error) {
+	store := keeper.storeService.OpenKVStore(ctx)
+	return store.Iterator(types.ActiveProposalQueuePrefix, storetypes.PrefixEndBytes(types.ActiveProposalByTimeKey(endTime)))
+}
+
+// InactiveProposalQueueIterator returns an sdk.Iterator for all the proposals in the Inactive Queue that expire by endTime
+func (keeper Keeper) InactiveProposalQueueIterator(ctx sdk.Context, endTime time.Time) (db.Iterator, error) {
+	store := keeper.storeService.OpenKVStore(ctx)
+	return store.Iterator(types.InactiveProposalQueuePrefix, storetypes.PrefixEndBytes(types.InactiveProposalByTimeKey(endTime)))
 }

@@ -16,11 +16,12 @@ const (
 	OptionNo         = VoteOption_VOTE_OPTION_NO
 	OptionNoWithVeto = VoteOption_VOTE_OPTION_NO_WITH_VETO
 	OptionAbstain    = VoteOption_VOTE_OPTION_ABSTAIN
+	OptionEncrypted  = VoteOption_VOTE_OPTION_ENCRYPTED
 )
 
 // NewVote creates a new Vote instance
-func NewVote(proposalID uint64, voter sdk.AccAddress, options WeightedVoteOptions, metadata string) Vote {
-	return Vote{ProposalId: proposalID, Voter: voter.String(), Options: options, Metadata: metadata}
+func NewVote(proposalID uint64, voter sdk.AccAddress, options WeightedVoteOptions, encData, metadata string) Vote {
+	return Vote{ProposalId: proposalID, Voter: voter.String(), Options: options, Metadata: metadata, EncryptedVoteData: encData}
 }
 
 // Empty returns whether a vote is empty.
@@ -135,7 +136,8 @@ func ValidVoteOption(option VoteOption) bool {
 	if option == OptionYes ||
 		option == OptionAbstain ||
 		option == OptionNo ||
-		option == OptionNoWithVeto {
+		option == OptionNoWithVeto ||
+		option == OptionEncrypted {
 		return true
 	}
 	return false

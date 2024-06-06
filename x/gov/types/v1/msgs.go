@@ -3,7 +3,10 @@ package v1
 import (
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	sdktx "github.com/cosmos/cosmos-sdk/types/tx"
+	"github.com/cosmos/cosmos-sdk/x/gov/codec"
+	"github.com/cosmos/cosmos-sdk/x/gov/types"
 	"github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
 )
 
@@ -105,4 +108,35 @@ func NewMsgCancelProposal(proposalID uint64, proposer string) *MsgCancelProposal
 		ProposalId: proposalID,
 		Proposer:   proposer,
 	}
+}
+
+func NewMsgVoteEncrypted(voter sdk.AccAddress, proposalID uint64, encData string, metadata string) *MsgVoteEncrypted {
+	return &MsgVoteEncrypted{proposalID, voter.String(), encData, metadata}
+}
+
+// Route implements the sdk.Msg interface.
+func (msg MsgVoteEncrypted) Route() string { return types.RouterKey }
+
+// Type implements the sdk.Msg interface.
+func (msg MsgVoteEncrypted) Type() string { return sdk.MsgTypeURL(&msg) }
+
+// ValidateBasic implements the sdk.Msg interface.
+func (msg MsgVoteEncrypted) ValidateBasic() error {
+	if _, err := sdk.AccAddressFromBech32(msg.Voter); err != nil {
+		return sdkerrors.ErrInvalidAddress.Wrapf("invalid voter address: %s", err)
+	}
+
+	return nil
+}
+
+// GetSignBytes returns the message bytes to sign over.
+func (msg MsgVoteEncrypted) GetSignBytes() []byte {
+	bz := codec.ModuleCdc.MustMarshalJSON(&msg)
+	return sdk.MustSortJSON(bz)
+}
+
+// GetSigners returns the expected signers for a MsgVote.
+func (msg MsgVoteEncrypted) GetSigners() []sdk.AccAddress {
+	voter, _ := sdk.AccAddressFromBech32(msg.Voter)
+	return []sdk.AccAddress{voter}
 }
