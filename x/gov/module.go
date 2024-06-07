@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	capabilitykeeper "github.com/cosmos/ibc-go/modules/capability/keeper"
+	porttypes "github.com/cosmos/ibc-go/v8/modules/core/05-port/types"
 	ibckeeper "github.com/cosmos/ibc-go/v8/modules/core/keeper"
 	gwruntime "github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/spf13/cobra"
@@ -48,6 +49,7 @@ var (
 
 	_ appmodule.AppModule     = AppModule{}
 	_ appmodule.HasEndBlocker = AppModule{}
+	_ porttypes.IBCModule     = IBCModule{}
 )
 
 // AppModuleBasic defines the basic application module used by the gov module.
@@ -212,10 +214,8 @@ func ProvideModule(in ModuleInputs) ModuleOutputs {
 		in.MsgServiceRouter,
 		defaultConfig,
 		authority.String(),
-		in.IBCKeeperFn().ChannelKeeper,
-		in.IBCKeeperFn().PortKeeper,
-		in.CapabilityScopedFn(govtypes.ModuleName),
-		in.IBCKeeperFn().ConnectionKeeper,
+		in.IBCKeeperFn,
+		in.CapabilityScopedFn,
 	)
 	m := NewAppModule(in.Cdc, k, in.AccountKeeper, in.BankKeeper, in.LegacySubspace)
 	hr := v1beta1.HandlerRoute{Handler: v1beta1.ProposalHandler, RouteKey: govtypes.RouterKey}
