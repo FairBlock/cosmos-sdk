@@ -177,8 +177,8 @@ type ModuleInputs struct {
 	StakingKeeper      govtypes.StakingKeeper
 	DistributionKeeper govtypes.DistributionKeeper
 
-	IBCKeeperFn        func() *ibckeeper.Keeper                   `optional:"true"`
-	CapabilityScopedFn func(string) capabilitykeeper.ScopedKeeper `optional:"true"`
+	IBCKeeperFn  func() *ibckeeper.Keeper `optional:"true"`
+	scopedKeeper capabilitykeeper.ScopedKeeper
 
 	// LegacySubspace is used solely for migration of x/params managed parameters
 	LegacySubspace govtypes.ParamSubspace `optional:"true"`
@@ -215,7 +215,7 @@ func ProvideModule(in ModuleInputs) ModuleOutputs {
 		defaultConfig,
 		authority.String(),
 		in.IBCKeeperFn,
-		in.CapabilityScopedFn,
+		in.scopedKeeper,
 	)
 	m := NewAppModule(in.Cdc, k, in.AccountKeeper, in.BankKeeper, in.LegacySubspace)
 	hr := v1beta1.HandlerRoute{Handler: v1beta1.ProposalHandler, RouteKey: govtypes.RouterKey}

@@ -83,6 +83,23 @@ func InitGenesis(ctx sdk.Context, ak types.AccountKeeper, bk types.BankKeeper, k
 	if !balance.Equal(totalDeposits) {
 		panic(fmt.Sprintf("expected module account was %s but we got %s", balance.String(), totalDeposits.String()))
 	}
+
+	var portID string
+	if data.PortId == "" {
+		portID = types.PortID
+	}
+
+	k.SetPort(ctx, portID)
+	// Only try to bind to port if it is not already bound, since we may already own
+	// port capability from capability InitGenesis
+	if !k.ShouldBound(ctx, portID) {
+		// module binds to the port on InitChain
+		// and claims the returned capability
+		err := k.BindPort(ctx, portID)
+		if err != nil {
+			panic("could not claim port capability: " + err.Error())
+		}
+	}
 }
 
 // ExportGenesis - output genesis parameters
@@ -130,6 +147,8 @@ func ExportGenesis(ctx sdk.Context, k *keeper.Keeper) (*v1.GenesisState, error) 
 		panic(err)
 	}
 
+	portId := k.GetPort(ctx)
+
 	return &v1.GenesisState{
 		StartingProposalId: startingProposalID,
 		Deposits:           proposalsDeposits,
@@ -137,5 +156,6 @@ func ExportGenesis(ctx sdk.Context, k *keeper.Keeper) (*v1.GenesisState, error) 
 		Proposals:          proposals,
 		Params:             &params,
 		Constitution:       constitution,
+		PortId:             portId,
 	}, nil
 }

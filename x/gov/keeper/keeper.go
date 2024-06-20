@@ -30,9 +30,8 @@ import (
 
 // Keeper defines the governance module Keeper
 type Keeper struct {
-	ibcKeeperFn        func() *ibckeeper.Keeper
-	capabilityScopedFn func(string) capabilitykeeper.ScopedKeeper
-	scopedKeeper       exported.ScopedKeeper
+	ibcKeeperFn  func() *ibckeeper.Keeper
+	scopedKeeper exported.ScopedKeeper
 
 	authKeeper  types.AccountKeeper
 	bankKeeper  types.BankKeeper
@@ -91,7 +90,7 @@ func NewKeeper(
 	bankKeeper types.BankKeeper, sk types.StakingKeeper, distrKeeper types.DistributionKeeper,
 	router baseapp.MessageRouter, config types.Config, authority string,
 	ibcKeeperFn func() *ibckeeper.Keeper,
-	capabilityScopedFn func(string) capabilitykeeper.ScopedKeeper,
+	scopedKeeper capabilitykeeper.ScopedKeeper,
 ) *Keeper {
 	// ensure governance module account is set
 	if addr := authKeeper.GetModuleAddress(types.ModuleName); addr == nil {
@@ -119,7 +118,7 @@ func NewKeeper(
 		config:                 config,
 		authority:              authority,
 		ibcKeeperFn:            ibcKeeperFn,
-		capabilityScopedFn:     capabilityScopedFn,
+		scopedKeeper:           scopedKeeper,
 		Constitution:           collections.NewItem(sb, types.ConstitutionKey, "constitution", collections.StringValue),
 		Params:                 collections.NewItem(sb, types.ParamsKey, "params", codec.CollValue[v1.Params](cdc)),
 		Deposits:               collections.NewMap(sb, types.DepositsKeyPrefix, "deposits", collections.PairKeyCodec(collections.Uint64Key, sdk.LengthPrefixedAddressKey(sdk.AccAddressKey)), codec.CollValue[v1.Deposit](cdc)), // nolint: staticcheck // sdk.LengthPrefixedAddressKey is needed to retain state compatibility
@@ -301,9 +300,6 @@ func (keeper Keeper) InactiveProposalQueueIterator(ctx sdk.Context, endTime time
 
 // ScopedKeeper returns the ScopedKeeper
 func (k *Keeper) ScopedKeeper() exported.ScopedKeeper {
-	if k.scopedKeeper == nil && k.capabilityScopedFn != nil {
-		k.scopedKeeper = k.capabilityScopedFn(types.ModuleName)
-	}
 	return k.scopedKeeper
 }
 
