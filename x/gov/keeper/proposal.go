@@ -5,11 +5,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
+	"time"
+
 	commontypes "github.com/Fairblock/fairyring/x/common/types"
 	kstypes "github.com/Fairblock/fairyring/x/keyshare/types"
 	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
-	"strconv"
-	"time"
 
 	"cosmossdk.io/collections"
 	errorsmod "cosmossdk.io/errors"
@@ -102,6 +103,7 @@ func (keeper Keeper) SubmitProposal(ctx context.Context, messages []sdk.Msg, met
 
 	submitTime := sdkCtx.BlockHeader().Time
 	depositPeriod := params.MaxDepositPeriod
+	votingPeriod := params.VotingPeriod
 
 	proposal, err := v1.NewProposal(messages, proposalID, submitTime, submitTime.Add(*depositPeriod), metadata, title, summary, proposer, expedited)
 	if err != nil {
@@ -123,12 +125,15 @@ func (keeper Keeper) SubmitProposal(ctx context.Context, messages []sdk.Msg, met
 		return v1.Proposal{}, err
 	}
 
+	delay := *depositPeriod + *votingPeriod
+
 	// Directly make request to keyshare module if sourcechain (fairyring)
 	if params.IsSourceChain {
 		req := commontypes.RequestAggrKeyshare{
 			Id: &commontypes.RequestAggrKeyshare_ProposalId{
 				ProposalId: strconv.FormatUint(proposalID, 10),
 			},
+			EstimatedDelay: &delay,
 		}
 
 		keeper.SetReqQueueEntry(sdkCtx, req)
@@ -150,6 +155,7 @@ func (keeper Keeper) SubmitProposal(ctx context.Context, messages []sdk.Msg, met
 		Id: &kstypes.RequestAggrKeysharePacketData_ProposalId{
 			ProposalId: strconv.FormatUint(proposalID, 10),
 		},
+		EstimatedDelay: &delay,
 	}
 	timeoutTimestamp := sdkCtx.BlockTime().Add(time.Second * 20).UnixNano()
 

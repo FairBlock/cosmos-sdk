@@ -1,4 +1,6 @@
-go 1.21
+go 1.21.5
+
+toolchain go1.22.4
 
 module github.com/cosmos/cosmos-sdk
 
@@ -99,7 +101,7 @@ require (
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/dvsekhvalnov/jose2go v1.6.0 // indirect
 	github.com/emicklei/dot v1.6.1 // indirect
-	github.com/fatih/color v1.15.0 // indirect
+	github.com/fatih/color v1.16.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/getsentry/sentry-go v0.27.0 // indirect
@@ -178,9 +180,9 @@ require (
 
 // Below are the long-lived replace of the Cosmos SDK
 replace (
-	// use cosmos fork of keyring
-	github.com/CosmWasm/wasmd => ../wasmd_latest
 	github.com/99designs/keyring => github.com/cosmos/keyring v1.2.0
+	// use cosmos fork of keyring
+	github.com/CosmWasm/wasmd => ../wasmd
 	github.com/Fairblock/fairyring => ../fairyring
 	// dgrijalva/jwt-go is deprecated and doesn't receive security updates.
 	// TODO: remove it: https://github.com/cosmos/cosmos-sdk/issues/13134
