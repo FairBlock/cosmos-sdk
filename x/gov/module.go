@@ -4,6 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sort"
+	"strings"
+
 	capabilitykeeper "github.com/cosmos/ibc-go/modules/capability/keeper"
 	porttypes "github.com/cosmos/ibc-go/v8/modules/core/05-port/types"
 	ibckeeper "github.com/cosmos/ibc-go/v8/modules/core/keeper"
@@ -11,8 +14,6 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
-	"sort"
-	"strings"
 
 	modulev1 "cosmossdk.io/api/cosmos/gov/module/v1"
 	"cosmossdk.io/core/address"
@@ -177,8 +178,8 @@ type ModuleInputs struct {
 	StakingKeeper      govtypes.StakingKeeper
 	DistributionKeeper govtypes.DistributionKeeper
 
-	IBCKeeperFn  func() *ibckeeper.Keeper `optional:"true"`
-	scopedKeeper capabilitykeeper.ScopedKeeper
+	IBCKeeperFn    func() *ibckeeper.Keeper                   `optional:"true"`
+	ScopedKeeperFn func(string) capabilitykeeper.ScopedKeeper `optional:"true"`
 
 	// LegacySubspace is used solely for migration of x/params managed parameters
 	LegacySubspace govtypes.ParamSubspace `optional:"true"`
@@ -215,7 +216,7 @@ func ProvideModule(in ModuleInputs) ModuleOutputs {
 		defaultConfig,
 		authority.String(),
 		in.IBCKeeperFn,
-		in.scopedKeeper,
+		in.ScopedKeeperFn,
 	)
 	m := NewAppModule(in.Cdc, k, in.AccountKeeper, in.BankKeeper, in.LegacySubspace)
 	hr := v1beta1.HandlerRoute{Handler: v1beta1.ProposalHandler, RouteKey: govtypes.RouterKey}

@@ -2,10 +2,12 @@ package keeper
 
 import (
 	"context"
+	"fmt"
+	"time"
+
 	errorsmod "cosmossdk.io/errors"
 	"cosmossdk.io/store/prefix"
 	storetypes "cosmossdk.io/store/types"
-	"fmt"
 	db "github.com/cosmos/cosmos-db"
 	"github.com/cosmos/cosmos-sdk/runtime"
 	capabilitykeeper "github.com/cosmos/ibc-go/modules/capability/keeper"
@@ -14,7 +16,6 @@ import (
 	host "github.com/cosmos/ibc-go/v8/modules/core/24-host"
 	"github.com/cosmos/ibc-go/v8/modules/core/exported"
 	ibckeeper "github.com/cosmos/ibc-go/v8/modules/core/keeper"
-	"time"
 
 	"cosmossdk.io/collections"
 	corestoretypes "cosmossdk.io/core/store"
@@ -30,8 +31,9 @@ import (
 
 // Keeper defines the governance module Keeper
 type Keeper struct {
-	ibcKeeperFn  func() *ibckeeper.Keeper
-	scopedKeeper exported.ScopedKeeper
+	ibcKeeperFn        func() *ibckeeper.Keeper
+	capabilityScopedFn func(string) capabilitykeeper.ScopedKeeper
+	scopedKeeper       exported.ScopedKeeper
 
 	authKeeper  types.AccountKeeper
 	bankKeeper  types.BankKeeper
@@ -90,7 +92,7 @@ func NewKeeper(
 	bankKeeper types.BankKeeper, sk types.StakingKeeper, distrKeeper types.DistributionKeeper,
 	router baseapp.MessageRouter, config types.Config, authority string,
 	ibcKeeperFn func() *ibckeeper.Keeper,
-	scopedKeeper capabilitykeeper.ScopedKeeper,
+	capabilityScopedFn func(string) capabilitykeeper.ScopedKeeper,
 ) *Keeper {
 	// ensure governance module account is set
 	if addr := authKeeper.GetModuleAddress(types.ModuleName); addr == nil {
@@ -118,7 +120,7 @@ func NewKeeper(
 		config:                 config,
 		authority:              authority,
 		ibcKeeperFn:            ibcKeeperFn,
-		scopedKeeper:           scopedKeeper,
+		capabilityScopedFn:     capabilityScopedFn,
 		Constitution:           collections.NewItem(sb, types.ConstitutionKey, "constitution", collections.StringValue),
 		Params:                 collections.NewItem(sb, types.ParamsKey, "params", codec.CollValue[v1.Params](cdc)),
 		Deposits:               collections.NewMap(sb, types.DepositsKeyPrefix, "deposits", collections.PairKeyCodec(collections.Uint64Key, sdk.LengthPrefixedAddressKey(sdk.AccAddressKey)), codec.CollValue[v1.Deposit](cdc)), // nolint: staticcheck // sdk.LengthPrefixedAddressKey is needed to retain state compatibility
