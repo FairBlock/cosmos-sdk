@@ -92,11 +92,15 @@ func InitGenesis(ctx sdk.Context, ak types.AccountKeeper, bk types.BankKeeper, k
 	k.SetPort(ctx, portID)
 	// Only try to bind to port if it is not already bound, since we may already own
 	// port capability from capability InitGenesis
-	if !k.ShouldBound(ctx, portID) {
+	if k.ShouldBound(ctx, portID) {
 		// module binds to the port on InitChain
 		// and claims the returned capability
 		err := k.BindPort(ctx, portID)
+		k.Logger(ctx).Info("\n\n\n\n Binding gov port\n\n\n\n")
+		fmt.Println("\n\n\n\n Binding gov port\n\n\n\n")
 		if err != nil {
+			k.Logger(ctx).Info("\n\n\n\n Binding gov port failed \n\n\n\n")
+			fmt.Println("\n\n\n\n Binding gov port failed\n\n\n\n", err)
 			panic("could not claim port capability: " + err.Error())
 		}
 	}

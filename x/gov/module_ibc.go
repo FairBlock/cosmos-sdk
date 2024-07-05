@@ -42,6 +42,8 @@ func (im IBCModule) OnChanOpenInit(
 	version string,
 ) (string, error) {
 
+	im.keeper.Logger(ctx).Info("\n\n\n\n OnChanOpenInit \n\n\n\n")
+
 	// Require portID is the portID module is bound to
 	boundPort := im.keeper.GetPort(ctx)
 	if boundPort != portID {
@@ -57,6 +59,8 @@ func (im IBCModule) OnChanOpenInit(
 		return "", err
 	}
 
+	im.keeper.Logger(ctx).Info("\n\n\n\n OnChanOpenInit \n\n\n\n", version)
+
 	return version, nil
 }
 
@@ -71,6 +75,8 @@ func (im IBCModule) OnChanOpenTry(
 	counterparty channeltypes.Counterparty,
 	counterpartyVersion string,
 ) (string, error) {
+
+	im.keeper.Logger(ctx).Info("\n\n\n\n OnChanOpenTry \n\n\n\n")
 
 	// Require portID is the portID module is bound to
 	boundPort := im.keeper.GetPort(ctx)
@@ -93,6 +99,8 @@ func (im IBCModule) OnChanOpenTry(
 		}
 	}
 
+	im.keeper.Logger(ctx).Info("\n\n\n\n OnChanOpenTry \n\n\n\n")
+
 	return types.Version, nil
 }
 
@@ -104,9 +112,13 @@ func (im IBCModule) OnChanOpenAck(
 	_,
 	counterpartyVersion string,
 ) error {
+	im.keeper.Logger(ctx).Info("\n\n\n\n OnChanOpenAck \n\n\n\n")
+
 	if counterpartyVersion != types.Version {
 		return sdkerrors.Wrapf(kstypes.ErrInvalidVersion, "invalid counterparty version: %s, expected %s", counterpartyVersion, types.Version)
 	}
+	im.keeper.Logger(ctx).Info("\n\n\n\n OnChanOpenAck \n\n\n\n")
+
 	return nil
 }
 
@@ -116,6 +128,8 @@ func (im IBCModule) OnChanOpenConfirm(
 	portID,
 	channelID string,
 ) error {
+	im.keeper.Logger(ctx).Info("\n\n\n\n OnChanOpenConfirm \n\n\n\n")
+
 	// im.keeper.SetChannel(ctx, channelID)
 	return nil
 }
