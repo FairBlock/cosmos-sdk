@@ -1,6 +1,8 @@
 package keeper
 
 import (
+	"fmt"
+
 	"cosmossdk.io/store/prefix"
 	storetypes "cosmossdk.io/store/types"
 	commontypes "github.com/Fairblock/fairyring/x/common/types"
@@ -35,10 +37,19 @@ func (k Keeper) SetReqQueueEntry(
 	store := prefix.NewStore(runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx)), types.KeyPrefix(types.ReqQueueKeyPrefix))
 
 	entry := k.cdc.MustMarshal(&val)
+	fmt.Println("\n\n\n\nattempting set into req q: ", val, "\n\n\n\n")
+
 	store.Set(
 		types.QueueKey(val.GetProposalId()),
 		entry,
 	)
+
+	_, found := k.GetRequestQueueEntry(ctx, val.GetProposalId())
+	if found {
+		fmt.Println("\n\n\n\nsuccessfully set\n\n\n\n")
+	} else {
+		fmt.Println("\n\n\n\nfailed to set\n\n\n\n")
+	}
 }
 
 // RemoveQueueEntry removes an entry from the store
@@ -46,8 +57,10 @@ func (k Keeper) RemoveReqQueueEntry(
 	ctx sdk.Context,
 	proposalID string,
 ) {
+	fmt.Println("\n\n\n\nattempting removal from req q: ", proposalID, "\n\n\n\n")
 	store := prefix.NewStore(runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx)), types.KeyPrefix(types.ReqQueueKeyPrefix))
 	store.Delete(types.QueueKey(proposalID))
+	fmt.Println("\n\n\n\nsuccessfully deleted\n\n\n\n")
 }
 
 // GetAllGenEncTxQueueEntry returns all GenEncTxQueue entries

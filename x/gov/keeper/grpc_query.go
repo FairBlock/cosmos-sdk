@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"context"
+	"fmt"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -100,6 +101,8 @@ func (q queryServer) Proposals(ctx context.Context, req *v1.QueryProposalsReques
 	if err != nil && !errors.IsOf(err, collections.ErrInvalidIterator) {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
+
+	fmt.Println("\n\n\n\n Q Proposals :", filteredProposals, "\n\n\n\n")
 
 	return &v1.QueryProposalsResponse{Proposals: filteredProposals, Pagination: pageRes}, nil
 }
@@ -301,6 +304,7 @@ func (q legacyQueryServer) Proposal(ctx context.Context, req *v1beta1.QueryPropo
 }
 
 func (q legacyQueryServer) Proposals(ctx context.Context, req *v1beta1.QueryProposalsRequest) (*v1beta1.QueryProposalsResponse, error) {
+	fmt.Println("\n\n\n\n Legacy Server \n\n\n\n")
 	resp, err := q.qs.Proposals(ctx, &v1.QueryProposalsRequest{
 		ProposalStatus: v1.ProposalStatus(req.ProposalStatus),
 		Voter:          req.Voter,
