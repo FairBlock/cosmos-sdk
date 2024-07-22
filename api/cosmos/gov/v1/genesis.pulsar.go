@@ -176,6 +176,7 @@ var (
 	fd_GenesisState_tally_params         protoreflect.FieldDescriptor
 	fd_GenesisState_params               protoreflect.FieldDescriptor
 	fd_GenesisState_constitution         protoreflect.FieldDescriptor
+	fd_GenesisState_port_id              protoreflect.FieldDescriptor
 )
 
 func init() {
@@ -190,6 +191,7 @@ func init() {
 	fd_GenesisState_tally_params = md_GenesisState.Fields().ByName("tally_params")
 	fd_GenesisState_params = md_GenesisState.Fields().ByName("params")
 	fd_GenesisState_constitution = md_GenesisState.Fields().ByName("constitution")
+	fd_GenesisState_port_id = md_GenesisState.Fields().ByName("port_id")
 }
 
 var _ protoreflect.Message = (*fastReflection_GenesisState)(nil)
@@ -311,6 +313,12 @@ func (x *fastReflection_GenesisState) Range(f func(protoreflect.FieldDescriptor,
 			return
 		}
 	}
+	if x.PortId != "" {
+		value := protoreflect.ValueOfString(x.PortId)
+		if !f(fd_GenesisState_port_id, value) {
+			return
+		}
+	}
 }
 
 // Has reports whether a field is populated.
@@ -344,6 +352,8 @@ func (x *fastReflection_GenesisState) Has(fd protoreflect.FieldDescriptor) bool 
 		return x.Params != nil
 	case "cosmos.gov.v1.GenesisState.constitution":
 		return x.Constitution != ""
+	case "cosmos.gov.v1.GenesisState.port_id":
+		return x.PortId != ""
 	default:
 		if fd.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: cosmos.gov.v1.GenesisState"))
@@ -378,6 +388,8 @@ func (x *fastReflection_GenesisState) Clear(fd protoreflect.FieldDescriptor) {
 		x.Params = nil
 	case "cosmos.gov.v1.GenesisState.constitution":
 		x.Constitution = ""
+	case "cosmos.gov.v1.GenesisState.port_id":
+		x.PortId = ""
 	default:
 		if fd.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: cosmos.gov.v1.GenesisState"))
@@ -430,6 +442,9 @@ func (x *fastReflection_GenesisState) Get(descriptor protoreflect.FieldDescripto
 	case "cosmos.gov.v1.GenesisState.constitution":
 		value := x.Constitution
 		return protoreflect.ValueOfString(value)
+	case "cosmos.gov.v1.GenesisState.port_id":
+		value := x.PortId
+		return protoreflect.ValueOfString(value)
 	default:
 		if descriptor.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: cosmos.gov.v1.GenesisState"))
@@ -474,6 +489,8 @@ func (x *fastReflection_GenesisState) Set(fd protoreflect.FieldDescriptor, value
 		x.Params = value.Message().Interface().(*Params)
 	case "cosmos.gov.v1.GenesisState.constitution":
 		x.Constitution = value.Interface().(string)
+	case "cosmos.gov.v1.GenesisState.port_id":
+		x.PortId = value.Interface().(string)
 	default:
 		if fd.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: cosmos.gov.v1.GenesisState"))
@@ -536,6 +553,8 @@ func (x *fastReflection_GenesisState) Mutable(fd protoreflect.FieldDescriptor) p
 		panic(fmt.Errorf("field starting_proposal_id of message cosmos.gov.v1.GenesisState is not mutable"))
 	case "cosmos.gov.v1.GenesisState.constitution":
 		panic(fmt.Errorf("field constitution of message cosmos.gov.v1.GenesisState is not mutable"))
+	case "cosmos.gov.v1.GenesisState.port_id":
+		panic(fmt.Errorf("field port_id of message cosmos.gov.v1.GenesisState is not mutable"))
 	default:
 		if fd.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: cosmos.gov.v1.GenesisState"))
@@ -573,6 +592,8 @@ func (x *fastReflection_GenesisState) NewField(fd protoreflect.FieldDescriptor) 
 		m := new(Params)
 		return protoreflect.ValueOfMessage(m.ProtoReflect())
 	case "cosmos.gov.v1.GenesisState.constitution":
+		return protoreflect.ValueOfString("")
+	case "cosmos.gov.v1.GenesisState.port_id":
 		return protoreflect.ValueOfString("")
 	default:
 		if fd.IsExtension() {
@@ -684,6 +705,10 @@ func (x *fastReflection_GenesisState) ProtoMethods() *protoiface.Methods {
 		if l > 0 {
 			n += 1 + l + runtime.Sov(uint64(l))
 		}
+		l = len(x.PortId)
+		if l > 0 {
+			n += 1 + l + runtime.Sov(uint64(l))
+		}
 		if x.unknownFields != nil {
 			n += len(x.unknownFields)
 		}
@@ -712,6 +737,13 @@ func (x *fastReflection_GenesisState) ProtoMethods() *protoiface.Methods {
 		if x.unknownFields != nil {
 			i -= len(x.unknownFields)
 			copy(dAtA[i:], x.unknownFields)
+		}
+		if len(x.PortId) > 0 {
+			i -= len(x.PortId)
+			copy(dAtA[i:], x.PortId)
+			i = runtime.EncodeVarint(dAtA, i, uint64(len(x.PortId)))
+			i--
+			dAtA[i] = 0x52
 		}
 		if len(x.Constitution) > 0 {
 			i -= len(x.Constitution)
@@ -1175,6 +1207,38 @@ func (x *fastReflection_GenesisState) ProtoMethods() *protoiface.Methods {
 				}
 				x.Constitution = string(dAtA[iNdEx:postIndex])
 				iNdEx = postIndex
+			case 10:
+				if wireType != 2 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field PortId", wireType)
+				}
+				var stringLen uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+					}
+					if iNdEx >= l {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					stringLen |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				intStringLen := int(stringLen)
+				if intStringLen < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				postIndex := iNdEx + intStringLen
+				if postIndex < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				if postIndex > l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				x.PortId = string(dAtA[iNdEx:postIndex])
+				iNdEx = postIndex
 			default:
 				iNdEx = preIndex
 				skippy, err := runtime.Skip(dAtA[iNdEx:])
@@ -1240,21 +1304,21 @@ type GenesisState struct {
 	// proposals defines all the proposals present at genesis.
 	Proposals []*Proposal `protobuf:"bytes,4,rep,name=proposals,proto3" json:"proposals,omitempty"`
 	// Deprecated: Prefer to use `params` instead.
-	// deposit_params defines all the parameters of related to deposit.
+	// deposit_params defines all the paramaters of related to deposit.
 	//
 	// Deprecated: Do not use.
 	DepositParams *DepositParams `protobuf:"bytes,5,opt,name=deposit_params,json=depositParams,proto3" json:"deposit_params,omitempty"`
 	// Deprecated: Prefer to use `params` instead.
-	// voting_params defines all the parameters of related to voting.
+	// voting_params defines all the paramaters of related to voting.
 	//
 	// Deprecated: Do not use.
 	VotingParams *VotingParams `protobuf:"bytes,6,opt,name=voting_params,json=votingParams,proto3" json:"voting_params,omitempty"`
 	// Deprecated: Prefer to use `params` instead.
-	// tally_params defines all the parameters of related to tally.
+	// tally_params defines all the paramaters of related to tally.
 	//
 	// Deprecated: Do not use.
 	TallyParams *TallyParams `protobuf:"bytes,7,opt,name=tally_params,json=tallyParams,proto3" json:"tally_params,omitempty"`
-	// params defines all the parameters of x/gov module.
+	// params defines all the paramaters of x/gov module.
 	//
 	// Since: cosmos-sdk 0.47
 	Params *Params `protobuf:"bytes,8,opt,name=params,proto3" json:"params,omitempty"`
@@ -1265,6 +1329,7 @@ type GenesisState struct {
 	//
 	// Since: cosmos-sdk 0.50
 	Constitution string `protobuf:"bytes,9,opt,name=constitution,proto3" json:"constitution,omitempty"`
+	PortId       string `protobuf:"bytes,10,opt,name=port_id,json=portId,proto3" json:"port_id,omitempty"`
 }
 
 func (x *GenesisState) Reset() {
@@ -1353,6 +1418,13 @@ func (x *GenesisState) GetConstitution() string {
 	return ""
 }
 
+func (x *GenesisState) GetPortId() string {
+	if x != nil {
+		return x.PortId
+	}
+	return ""
+}
+
 var File_cosmos_gov_v1_genesis_proto protoreflect.FileDescriptor
 
 var file_cosmos_gov_v1_genesis_proto_rawDesc = []byte{
@@ -1360,7 +1432,7 @@ var file_cosmos_gov_v1_genesis_proto_rawDesc = []byte{
 	0x67, 0x65, 0x6e, 0x65, 0x73, 0x69, 0x73, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x12, 0x0d, 0x63,
 	0x6f, 0x73, 0x6d, 0x6f, 0x73, 0x2e, 0x67, 0x6f, 0x76, 0x2e, 0x76, 0x31, 0x1a, 0x17, 0x63, 0x6f,
 	0x73, 0x6d, 0x6f, 0x73, 0x2f, 0x67, 0x6f, 0x76, 0x2f, 0x76, 0x31, 0x2f, 0x67, 0x6f, 0x76, 0x2e,
-	0x70, 0x72, 0x6f, 0x74, 0x6f, 0x22, 0xfb, 0x03, 0x0a, 0x0c, 0x47, 0x65, 0x6e, 0x65, 0x73, 0x69,
+	0x70, 0x72, 0x6f, 0x74, 0x6f, 0x22, 0x94, 0x04, 0x0a, 0x0c, 0x47, 0x65, 0x6e, 0x65, 0x73, 0x69,
 	0x73, 0x53, 0x74, 0x61, 0x74, 0x65, 0x12, 0x30, 0x0a, 0x14, 0x73, 0x74, 0x61, 0x72, 0x74, 0x69,
 	0x6e, 0x67, 0x5f, 0x70, 0x72, 0x6f, 0x70, 0x6f, 0x73, 0x61, 0x6c, 0x5f, 0x69, 0x64, 0x18, 0x01,
 	0x20, 0x01, 0x28, 0x04, 0x52, 0x12, 0x73, 0x74, 0x61, 0x72, 0x74, 0x69, 0x6e, 0x67, 0x50, 0x72,
@@ -1392,17 +1464,19 @@ var file_cosmos_gov_v1_genesis_proto_rawDesc = []byte{
 	0x2e, 0x50, 0x61, 0x72, 0x61, 0x6d, 0x73, 0x52, 0x06, 0x70, 0x61, 0x72, 0x61, 0x6d, 0x73, 0x12,
 	0x22, 0x0a, 0x0c, 0x63, 0x6f, 0x6e, 0x73, 0x74, 0x69, 0x74, 0x75, 0x74, 0x69, 0x6f, 0x6e, 0x18,
 	0x09, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0c, 0x63, 0x6f, 0x6e, 0x73, 0x74, 0x69, 0x74, 0x75, 0x74,
-	0x69, 0x6f, 0x6e, 0x42, 0x9d, 0x01, 0x0a, 0x11, 0x63, 0x6f, 0x6d, 0x2e, 0x63, 0x6f, 0x73, 0x6d,
-	0x6f, 0x73, 0x2e, 0x67, 0x6f, 0x76, 0x2e, 0x76, 0x31, 0x42, 0x0c, 0x47, 0x65, 0x6e, 0x65, 0x73,
-	0x69, 0x73, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x50, 0x01, 0x5a, 0x24, 0x63, 0x6f, 0x73, 0x6d, 0x6f,
-	0x73, 0x73, 0x64, 0x6b, 0x2e, 0x69, 0x6f, 0x2f, 0x61, 0x70, 0x69, 0x2f, 0x63, 0x6f, 0x73, 0x6d,
-	0x6f, 0x73, 0x2f, 0x67, 0x6f, 0x76, 0x2f, 0x76, 0x31, 0x3b, 0x67, 0x6f, 0x76, 0x76, 0x31, 0xa2,
-	0x02, 0x03, 0x43, 0x47, 0x58, 0xaa, 0x02, 0x0d, 0x43, 0x6f, 0x73, 0x6d, 0x6f, 0x73, 0x2e, 0x47,
-	0x6f, 0x76, 0x2e, 0x56, 0x31, 0xca, 0x02, 0x0d, 0x43, 0x6f, 0x73, 0x6d, 0x6f, 0x73, 0x5c, 0x47,
-	0x6f, 0x76, 0x5c, 0x56, 0x31, 0xe2, 0x02, 0x19, 0x43, 0x6f, 0x73, 0x6d, 0x6f, 0x73, 0x5c, 0x47,
-	0x6f, 0x76, 0x5c, 0x56, 0x31, 0x5c, 0x47, 0x50, 0x42, 0x4d, 0x65, 0x74, 0x61, 0x64, 0x61, 0x74,
-	0x61, 0xea, 0x02, 0x0f, 0x43, 0x6f, 0x73, 0x6d, 0x6f, 0x73, 0x3a, 0x3a, 0x47, 0x6f, 0x76, 0x3a,
-	0x3a, 0x56, 0x31, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x69, 0x6f, 0x6e, 0x12, 0x17, 0x0a, 0x07, 0x70, 0x6f, 0x72, 0x74, 0x5f, 0x69, 0x64, 0x18, 0x0a,
+	0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x70, 0x6f, 0x72, 0x74, 0x49, 0x64, 0x42, 0x9d, 0x01, 0x0a,
+	0x11, 0x63, 0x6f, 0x6d, 0x2e, 0x63, 0x6f, 0x73, 0x6d, 0x6f, 0x73, 0x2e, 0x67, 0x6f, 0x76, 0x2e,
+	0x76, 0x31, 0x42, 0x0c, 0x47, 0x65, 0x6e, 0x65, 0x73, 0x69, 0x73, 0x50, 0x72, 0x6f, 0x74, 0x6f,
+	0x50, 0x01, 0x5a, 0x24, 0x63, 0x6f, 0x73, 0x6d, 0x6f, 0x73, 0x73, 0x64, 0x6b, 0x2e, 0x69, 0x6f,
+	0x2f, 0x61, 0x70, 0x69, 0x2f, 0x63, 0x6f, 0x73, 0x6d, 0x6f, 0x73, 0x2f, 0x67, 0x6f, 0x76, 0x2f,
+	0x76, 0x31, 0x3b, 0x67, 0x6f, 0x76, 0x76, 0x31, 0xa2, 0x02, 0x03, 0x43, 0x47, 0x58, 0xaa, 0x02,
+	0x0d, 0x43, 0x6f, 0x73, 0x6d, 0x6f, 0x73, 0x2e, 0x47, 0x6f, 0x76, 0x2e, 0x56, 0x31, 0xca, 0x02,
+	0x0d, 0x43, 0x6f, 0x73, 0x6d, 0x6f, 0x73, 0x5c, 0x47, 0x6f, 0x76, 0x5c, 0x56, 0x31, 0xe2, 0x02,
+	0x19, 0x43, 0x6f, 0x73, 0x6d, 0x6f, 0x73, 0x5c, 0x47, 0x6f, 0x76, 0x5c, 0x56, 0x31, 0x5c, 0x47,
+	0x50, 0x42, 0x4d, 0x65, 0x74, 0x61, 0x64, 0x61, 0x74, 0x61, 0xea, 0x02, 0x0f, 0x43, 0x6f, 0x73,
+	0x6d, 0x6f, 0x73, 0x3a, 0x3a, 0x47, 0x6f, 0x76, 0x3a, 0x3a, 0x56, 0x31, 0x62, 0x06, 0x70, 0x72,
+	0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (

@@ -24,6 +24,8 @@ enum VoteOption {
   VOTE_OPTION_NO = 3;
   // VOTE_OPTION_NO_WITH_VETO defines a no with veto vote option.
   VOTE_OPTION_NO_WITH_VETO = 4;
+  // VOTE_OPTION_ENCRYPTED defines an encrypted vote
+  VOTE_OPTION_ENCRYPTED = 5;
 }
 
 // WeightedVoteOption defines a unit of vote for vote split.
@@ -108,6 +110,17 @@ message Proposal {
   //
   // Since: cosmos-sdk 0.50
   string failed_reason = 15;
+
+  // flag to check if proposal has at least one encrypted vote
+  bool has_encrypted_votes = 16;
+
+  // identity and pubkey are used to submit encrypted votes
+  string identity = 17;
+
+  string pubkey = 18;
+
+  // aggregated keyshare is used to decrypt the encrypted votes during the tally phase
+  string aggr_keyshare = 19;
 }
 
 // ProposalStatus enumerates the valid statuses of a proposal.
@@ -129,6 +142,9 @@ enum ProposalStatus {
   // PROPOSAL_STATUS_FAILED defines a proposal status of a proposal that has
   // failed.
   PROPOSAL_STATUS_FAILED = 5;
+  // PROPOSAL_STATUS_TALLY_PERIOD defines a proposal status during the tally
+  // period.
+  PROPOSAL_STATUS_TALLY_PERIOD = 6;
 }
 
 // TallyResult defines a standard tally for a governance proposal.
@@ -141,6 +157,8 @@ message TallyResult {
   string no_count = 3 [(cosmos_proto.scalar) = "cosmos.Int"];
   // no_with_veto_count is the number of no with veto votes on a proposal.
   string no_with_veto_count = 4 [(cosmos_proto.scalar) = "cosmos.Int"];
+  // encrypted_count is the number of encrypted votes on a proposal.
+  string encrypted_count = 5 [(cosmos_proto.scalar) = "cosmos.Int"];
 }
 
 // Vote defines a vote on a governance proposal.
@@ -160,6 +178,8 @@ message Vote {
   // metadata is any arbitrary metadata attached to the vote.
   // the recommended format of the metadata is to be found here: https://docs.cosmos.network/v0.47/modules/gov#vote-5
   string metadata = 5;
+
+  string encrypted_vote_data = 6;
 }
 
 // DepositParams defines the params for deposits on governance proposals.
@@ -254,18 +274,12 @@ message Params {
       [(gogoproto.nullable) = false, (amino.dont_omitempty) = true];
 
   // burn deposits if a proposal does not meet quorum
-  //
-  // Since: cosmos-sdk 0.47
   bool burn_vote_quorum = 13;
 
   // burn deposits if the proposal does not enter voting period
-  //
-  // Since: cosmos-sdk 0.47
   bool burn_proposal_deposit_prevote = 14;
 
   // burn deposits if quorum with vote type no_veto is met
-  //
-  // Since: cosmos-sdk 0.47
   bool burn_vote_veto = 15;
 
   // The ratio representing the proportion of the deposit value minimum that must be met when making a deposit.
@@ -274,4 +288,24 @@ message Params {
   //
   // Since: cosmos-sdk 0.50
   string min_deposit_ratio = 16 [(cosmos_proto.scalar) = "cosmos.Dec"];
+  // Duration of the voting period.
+  google.protobuf.Duration max_tally_period = 17 [(gogoproto.stdduration) = true];
+
+  repeated TrustedCounterParty trusted_counter_parties = 18;
+  string                       channel_id              = 19;
+  bool                         is_source_chain         = 20;
+}
+
+// DecryptedVoteOption is the structure to which the
+// encrypted votes will be unmarshalled to when decrypted
+message DecryptedVoteOption {
+  // option defines the vote option.
+  VoteOption option    = 1;
+  int64      random_no = 2;
+}
+
+message TrustedCounterParty {
+  string client_id     = 1;
+  string connection_id = 2;
+  string channel_id    = 3;
 }

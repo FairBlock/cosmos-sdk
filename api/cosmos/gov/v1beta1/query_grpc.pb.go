@@ -38,7 +38,6 @@ type QueryClient interface {
 	// Proposals queries all proposals based on given status.
 	Proposals(ctx context.Context, in *QueryProposalsRequest, opts ...grpc.CallOption) (*QueryProposalsResponse, error)
 	// Vote queries voted information based on proposalID, voterAddr.
-	// Due to how we handle state, this query would error for proposals that has already been finished.
 	Vote(ctx context.Context, in *QueryVoteRequest, opts ...grpc.CallOption) (*QueryVoteResponse, error)
 	// Votes queries votes of a given proposal.
 	Votes(ctx context.Context, in *QueryVotesRequest, opts ...grpc.CallOption) (*QueryVotesResponse, error)
@@ -141,7 +140,6 @@ type QueryServer interface {
 	// Proposals queries all proposals based on given status.
 	Proposals(context.Context, *QueryProposalsRequest) (*QueryProposalsResponse, error)
 	// Vote queries voted information based on proposalID, voterAddr.
-	// Due to how we handle state, this query would error for proposals that has already been finished.
 	Vote(context.Context, *QueryVoteRequest) (*QueryVoteResponse, error)
 	// Votes queries votes of a given proposal.
 	Votes(context.Context, *QueryVotesRequest) (*QueryVotesResponse, error)
