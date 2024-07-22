@@ -31,6 +31,7 @@ func migrateParams(ctx sdk.Context, store storetypes.KVStore, legacySubspace exp
 		defaultParams.ExpeditedMinDeposit,
 		*dp.MaxDepositPeriod,
 		*vp.VotingPeriod,
+		*defaultParams.MaxTallyPeriod,
 		*defaultParams.ExpeditedVotingPeriod,
 		tp.Quorum,
 		tp.Threshold,

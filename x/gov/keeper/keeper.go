@@ -302,12 +302,9 @@ func (keeper Keeper) InactiveProposalQueueIterator(ctx sdk.Context, endTime time
 
 // ScopedKeeper returns the ScopedKeeper
 func (k *Keeper) ScopedKeeper() exported.ScopedKeeper {
-	fmt.Println("\n\n\n\nScoped Keeper Gov: ", k.scopedKeeper, "\n\n\n\n")
 	if k.scopedKeeper == nil && k.capabilityScopedFn != nil {
 		k.scopedKeeper = k.capabilityScopedFn(types.ModuleName)
-		fmt.Println("Scoped Keeper Gov: ", k.scopedKeeper, "\n\n\n\n")
 	}
-	fmt.Println("\n\n\n\nScoped Keeper Gov\n\n\n\n", k.scopedKeeper)
 
 	return k.scopedKeeper
 }
@@ -330,13 +327,10 @@ func (k *Keeper) ChanCloseInit(ctx sdk.Context, portID, channelID string) error 
 func (k *Keeper) ShouldBound(ctx sdk.Context, portID string) bool {
 	scopedKeeper := k.ScopedKeeper()
 	if scopedKeeper == nil {
-		fmt.Println("\n\n\n Scoped Keeper nil \n\n\n")
 		return false
 	}
 
-	fmt.Println("\n\n\n\nShould bind", portID, "\n\n\n\n")
 	_, ok := scopedKeeper.GetCapability(ctx, host.PortPath(portID))
-	fmt.Println("\n\n\n", ok, "\n\n\n")
 	return !ok
 }
 
@@ -369,6 +363,5 @@ func (k *Keeper) AuthenticateCapability(ctx sdk.Context, cap *capabilitytypes.Ca
 // ClaimCapability allows the IBC app module to claim a capability that core IBC
 // passes to it
 func (k *Keeper) ClaimCapability(ctx sdk.Context, cap *capabilitytypes.Capability, name string) error {
-	fmt.Println("\n\n\n\nClaim Cap: ", cap.Index, name, "\n\n\n")
 	return k.ScopedKeeper().ClaimCapability(ctx, cap, name)
 }

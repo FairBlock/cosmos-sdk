@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/hex"
+
 	enc "github.com/FairBlock/DistributedIBE/encryption"
 	bls "github.com/drand/kyber-bls12381"
 
@@ -25,6 +26,7 @@ func (keeper Keeper) Tally(ctx context.Context, proposal v1.Proposal) (passes, b
 	results[v1.OptionAbstain] = math.LegacyZeroDec()
 	results[v1.OptionNo] = math.LegacyZeroDec()
 	results[v1.OptionNoWithVeto] = math.LegacyZeroDec()
+	results[v1.OptionEncrypted] = math.LegacyZeroDec()
 
 	totalVotingPower := math.LegacyZeroDec()
 	currValidators := make(map[string]v1.ValidatorGovInfo)
@@ -239,10 +241,11 @@ func (keeper Keeper) DecryptVotes(ctx sdk.Context, proposal v1.Proposal) {
 
 	for _, dv := range deletedVotes {
 		voter := sdk.MustAccAddressFromBech32(dv.Voter)
-		keeper.deleteVote(ctx, dv.ProposalId, voter)
+		keeper.Votes.Remove(ctx, collections.Join(dv.ProposalId, voter))
 	}
 
 	for _, mv := range modifiedVotes {
-		keeper.SetVote(ctx, mv)
+		voter := sdk.MustAccAddressFromBech32(mv.Voter)
+		keeper.Votes.Set(ctx, collections.Join(mv.ProposalId, voter), mv)
 	}
 }

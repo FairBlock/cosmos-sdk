@@ -127,7 +127,6 @@ func (keeper Keeper) SubmitProposal(ctx context.Context, messages []sdk.Msg, met
 
 	delay := *depositPeriod + *votingPeriod
 
-	fmt.Println("\n\n\n\n Proposal Created: ", proposal, "\n\n\n\n")
 	// Directly make request to keyshare module if sourcechain (fairyring)
 	if params.IsSourceChain {
 		req := commontypes.RequestAggrKeyshare{
@@ -244,14 +243,11 @@ func (keeper Keeper) CancelProposal(ctx context.Context, proposalID uint64, prop
 
 // SetProposal sets a proposal to store.
 func (keeper Keeper) SetProposal(ctx context.Context, proposal v1.Proposal) error {
-	fmt.Println("\n\n\n\n Setting Proposal: ", proposal, "\n\n\n\n")
 	if proposal.Status == v1.StatusVotingPeriod {
-		fmt.Println("\n\n\n\n StatusVotingPeriod \n\n\n\n")
 		err := keeper.VotingPeriodProposals.Set(ctx, proposal.Id, []byte{1})
 		if err != nil {
 			return err
 		}
-		fmt.Println("\n\n\n\nvoting period proposal set\n\n\n\n")
 	} else {
 		err := keeper.VotingPeriodProposals.Remove(ctx, proposal.Id)
 		if err != nil {

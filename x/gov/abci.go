@@ -3,11 +3,12 @@ package gov
 import (
 	"errors"
 	"fmt"
+	"strconv"
+	"time"
+
 	commontypes "github.com/Fairblock/fairyring/x/common/types"
 	kstypes "github.com/Fairblock/fairyring/x/keyshare/types"
 	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
-	"strconv"
-	"time"
 
 	"cosmossdk.io/collections"
 	"cosmossdk.io/log"
@@ -126,22 +127,11 @@ func EndBlocker(ctx sdk.Context, keeper *keeper.Keeper) error {
 
 		var tagValue, logMsg string
 
-		passes, burnDeposits, tallyResults, err := keeper.Tally(ctx, proposal)
-		if err != nil {
-			return false, err
-		}
-
 		tallyPeriod := keeper.GetParams(ctx).MaxTallyPeriod
 		tallyEndTime := proposal.VotingEndTime.Add(*tallyPeriod)
 
-		fmt.Println("\n\n\nVoting period ended for Proposal: ", proposal.Id)
-		fmt.Println("Proposal aggr keyshare: ", proposal.AggrKeyshare)
-
 		if proposal.HasEncryptedVotes {
-			fmt.Println("\n\n Proposal has encrypted votes")
-
 			if proposal.AggrKeyshare == "" && (ctx.BlockTime().Compare(tallyEndTime) >= 0) {
-				fmt.Println("\n\n Proposal tally period is over")
 				proposal.Status = v1.StatusFailed
 				tagValue = types.AttributeValueProposalFailed
 				logMsg = "failed"
@@ -221,6 +211,11 @@ func EndBlocker(ctx sdk.Context, keeper *keeper.Keeper) error {
 			} else {
 				return false, nil
 			}
+		}
+
+		passes, burnDeposits, tallyResults, err := keeper.Tally(ctx, proposal)
+		if err != nil {
+			return false, err
 		}
 
 		// If an expedited proposal fails, we do not want to update

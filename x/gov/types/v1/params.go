@@ -12,6 +12,7 @@ import (
 // Default period for deposits & voting
 const (
 	DefaultPeriod                         time.Duration = time.Hour * 24 * 2 // 2 days
+	DefaultTallyPeriod                    time.Duration = time.Minute * 10
 	DefaultExpeditedPeriod                time.Duration = time.Hour * 24 * 1 // 1 day
 	DefaultMinExpeditedDepositTokensRatio               = 5
 )
@@ -59,7 +60,7 @@ func NewVotingParams(votingPeriod *time.Duration) VotingParams {
 
 // NewParams creates a new Params instance with given values.
 func NewParams(
-	minDeposit, expeditedminDeposit sdk.Coins, maxDepositPeriod, votingPeriod, expeditedVotingPeriod time.Duration,
+	minDeposit, expeditedminDeposit sdk.Coins, maxDepositPeriod, votingPeriod, maxTallyPeriod, expeditedVotingPeriod time.Duration,
 	quorum, threshold, expeditedThreshold, vetoThreshold, minInitialDepositRatio, proposalCancelRatio, proposalCancelDest string,
 	burnProposalDeposit, burnVoteQuorum, burnVoteVeto bool, minDepositRatio string,
 ) Params {
@@ -68,6 +69,7 @@ func NewParams(
 		ExpeditedMinDeposit:        expeditedminDeposit,
 		MaxDepositPeriod:           &maxDepositPeriod,
 		VotingPeriod:               &votingPeriod,
+		MaxTallyPeriod:             &maxTallyPeriod,
 		ExpeditedVotingPeriod:      &expeditedVotingPeriod,
 		Quorum:                     quorum,
 		Threshold:                  threshold,
@@ -90,6 +92,7 @@ func DefaultParams() Params {
 		sdk.NewCoins(sdk.NewCoin(sdk.DefaultBondDenom, DefaultMinExpeditedDepositTokens)),
 		DefaultPeriod,
 		DefaultPeriod,
+		DefaultTallyPeriod,
 		DefaultExpeditedPeriod,
 		DefaultQuorum.String(),
 		DefaultThreshold.String(),
