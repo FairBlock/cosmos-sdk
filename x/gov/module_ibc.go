@@ -25,7 +25,6 @@ type IBCModule struct {
 }
 
 func NewIBCModule(k *keeper.Keeper) IBCModule {
-	fmt.Println("\n\n\n\nGov IBC module : ", k)
 	return IBCModule{
 		keeper: k,
 	}
