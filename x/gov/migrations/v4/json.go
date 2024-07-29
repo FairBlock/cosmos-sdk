@@ -31,6 +31,7 @@ func MigrateJSON(oldState *v1.GenesisState) (*v1.GenesisState, error) {
 		defaultParams.BurnVoteQuorum,
 		defaultParams.BurnVoteVeto,
 		defaultParams.MinDepositRatio,
+		defaultParams.ChannelId,
 	)
 
 	return &v1.GenesisState{

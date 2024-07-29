@@ -3,10 +3,11 @@ package v5
 import (
 	"cosmossdk.io/collections"
 	corestoretypes "cosmossdk.io/core/store"
+	"cosmossdk.io/math"
+	"time"
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	v4 "github.com/cosmos/cosmos-sdk/x/gov/migrations/v4"
 	govv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 )
 
@@ -24,24 +25,34 @@ var (
 // Set of default chain constitution.
 func MigrateStore(ctx sdk.Context, storeService corestoretypes.KVStoreService, cdc codec.BinaryCodec, constitutionCollection collections.Item[string]) error {
 	store := storeService.OpenKVStore(ctx)
-	paramsBz, err := store.Get(v4.ParamsKey)
-	if err != nil {
-		return err
-	}
 
-	var params govv1.Params
-	err = cdc.Unmarshal(paramsBz, &params)
-	if err != nil {
-		return err
-	}
+	// The params the chain is getting, is from official gov module instead of private gov module,
+	// Therefore, it is missing some attributes and wasn't able to unmarshal to the params type.
+	// We are manually overriding the param.
 
-	defaultParams := govv1.DefaultParams()
-	params.ExpeditedMinDeposit = defaultParams.ExpeditedMinDeposit
-	params.ExpeditedVotingPeriod = defaultParams.ExpeditedVotingPeriod
-	params.ExpeditedThreshold = defaultParams.ExpeditedThreshold
-	params.ProposalCancelRatio = defaultParams.ProposalCancelRatio
-	params.ProposalCancelDest = defaultParams.ProposalCancelDest
-	params.MinDepositRatio = defaultParams.MinDepositRatio
+	//paramsBz, err := store.Get(v4.ParamsKey)
+	//if err != nil {
+	//	return err
+	//}
+	//
+
+	//err = cdc.Unmarshal(paramsBz, &params)
+	//if err != nil {
+	//	// return err
+	//}
+
+	twelveHours := time.Hour * 12
+	tallyPeriod := time.Second * 120
+
+	params := govv1.DefaultParams()
+	params.VotingPeriod = &twelveHours
+	params.MaxDepositPeriod = &twelveHours
+	params.MinDeposit = []sdk.Coin{
+		sdk.NewCoin("ufairy", math.NewIntFromUint64(10000000000)),
+	}
+	params.MaxTallyPeriod = &tallyPeriod
+	params.IsSourceChain = true
+	params.MinInitialDepositRatio = math.LegacyMustNewDecFromStr("0.5").String()
 
 	bz, err := cdc.Marshal(&params)
 	if err != nil {
