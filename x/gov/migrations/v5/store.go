@@ -32,7 +32,7 @@ func MigrateStore(ctx sdk.Context, storeService corestoretypes.KVStoreService, c
 	var params govv1.Params
 	err = cdc.Unmarshal(paramsBz, &params)
 	if err != nil {
-		return err
+		// return err
 	}
 
 	defaultParams := govv1.DefaultParams()
@@ -42,6 +42,7 @@ func MigrateStore(ctx sdk.Context, storeService corestoretypes.KVStoreService, c
 	params.ProposalCancelRatio = defaultParams.ProposalCancelRatio
 	params.ProposalCancelDest = defaultParams.ProposalCancelDest
 	params.MinDepositRatio = defaultParams.MinDepositRatio
+	params.ChannelId = deaultParams.ChannelId
 
 	bz, err := cdc.Marshal(&params)
 	if err != nil {
