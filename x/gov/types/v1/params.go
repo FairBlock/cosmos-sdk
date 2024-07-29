@@ -32,7 +32,7 @@ var (
 	DefaultBurnVoteQuorom            = false // set to false to  replicate behavior of when this change was made (0.47)
 	DefaultBurnVoteVeto              = true  // set to true to replicate behavior of when this change was made (0.47)
 	DefaultMinDepositRatio           = sdkmath.LegacyMustNewDecFromStr("0.01")
-	DefaultChannelId		 = "channel-0"
+	DefaultChannelId                 = "channel-0"
 )
 
 // Deprecated: NewDepositParams creates a new DepositParams object
@@ -83,7 +83,7 @@ func NewParams(
 		BurnVoteQuorum:             burnVoteQuorum,
 		BurnVoteVeto:               burnVoteVeto,
 		MinDepositRatio:            minDepositRatio,
-		ChannelId:		    channelId,
+		ChannelId:                  channelId,
 	}
 }
 
