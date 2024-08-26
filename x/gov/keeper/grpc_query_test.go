@@ -293,7 +293,7 @@ func (suite *KeeperTestSuite) TestGRPCQueryProposals() {
 			func() {
 				testProposals[1].Status = v1.StatusVotingPeriod
 				suite.govKeeper.SetProposal(ctx, *testProposals[1])
-				suite.Require().NoError(suite.govKeeper.AddVote(ctx, testProposals[1].Id, addrs[0], v1.NewNonSplitVoteOption(v1.OptionAbstain), ""))
+				suite.Require().NoError(suite.govKeeper.AddVote(ctx, testProposals[1].Id, addrs[0], v1.NewNonSplitVoteOption(v1.OptionAbstain), "", ""))
 
 				req = &v1.QueryProposalsRequest{
 					Voter: addrs[0].String(),
@@ -511,7 +511,7 @@ func (suite *KeeperTestSuite) TestGRPCQueryVote() {
 			func() {
 				proposal.Status = v1.StatusVotingPeriod
 				suite.govKeeper.SetProposal(ctx, proposal)
-				suite.Require().NoError(suite.govKeeper.AddVote(ctx, proposal.Id, addrs[0], v1.NewNonSplitVoteOption(v1.OptionAbstain), ""))
+				suite.Require().NoError(suite.govKeeper.AddVote(ctx, proposal.Id, addrs[0], v1.NewNonSplitVoteOption(v1.OptionAbstain), "", ""))
 
 				req = &v1.QueryVoteRequest{
 					ProposalId: proposal.Id,
@@ -625,7 +625,7 @@ func (suite *KeeperTestSuite) TestLegacyGRPCQueryVote() {
 			func() {
 				proposal.Status = v1.StatusVotingPeriod
 				suite.govKeeper.SetProposal(ctx, proposal)
-				suite.Require().NoError(suite.govKeeper.AddVote(ctx, proposal.Id, addrs[0], v1.NewNonSplitVoteOption(v1.OptionAbstain), ""))
+				suite.Require().NoError(suite.govKeeper.AddVote(ctx, proposal.Id, addrs[0], v1.NewNonSplitVoteOption(v1.OptionAbstain), "", ""))
 
 				req = &v1beta1.QueryVoteRequest{
 					ProposalId: proposal.Id,
@@ -739,8 +739,8 @@ func (suite *KeeperTestSuite) TestGRPCQueryVotes() {
 				accAddr2, err2 := codec.StringToBytes(votes[1].Voter)
 				suite.Require().NoError(err1)
 				suite.Require().NoError(err2)
-				suite.Require().NoError(suite.govKeeper.AddVote(ctx, proposal.Id, accAddr1, votes[0].Options, ""))
-				suite.Require().NoError(suite.govKeeper.AddVote(ctx, proposal.Id, accAddr2, votes[1].Options, ""))
+				suite.Require().NoError(suite.govKeeper.AddVote(ctx, proposal.Id, accAddr1, votes[0].Options, "", ""))
+				suite.Require().NoError(suite.govKeeper.AddVote(ctx, proposal.Id, accAddr2, votes[1].Options, "", ""))
 
 				req = &v1.QueryVotesRequest{
 					ProposalId: proposal.Id,
@@ -843,8 +843,8 @@ func (suite *KeeperTestSuite) TestLegacyGRPCQueryVotes() {
 				accAddr2, err2 := codec.StringToBytes(votes[1].Voter)
 				suite.Require().NoError(err1)
 				suite.Require().NoError(err2)
-				suite.Require().NoError(suite.govKeeper.AddVote(ctx, proposal.Id, accAddr1, v1.NewNonSplitVoteOption(v1.OptionAbstain), ""))
-				suite.Require().NoError(suite.govKeeper.AddVote(ctx, proposal.Id, accAddr2, v1.NewNonSplitVoteOption(v1.OptionYes), ""))
+				suite.Require().NoError(suite.govKeeper.AddVote(ctx, proposal.Id, accAddr1, v1.NewNonSplitVoteOption(v1.OptionAbstain), "", ""))
+				suite.Require().NoError(suite.govKeeper.AddVote(ctx, proposal.Id, accAddr2, v1.NewNonSplitVoteOption(v1.OptionYes), "", ""))
 
 				req = &v1beta1.QueryVotesRequest{
 					ProposalId: proposal.Id,

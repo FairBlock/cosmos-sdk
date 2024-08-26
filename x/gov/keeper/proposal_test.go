@@ -123,13 +123,13 @@ func (suite *KeeperTestSuite) TestDeleteProposalInVotingPeriod() {
 
 		// add vote
 		voteOptions := []*v1.WeightedVoteOption{{Option: v1.OptionYes, Weight: "1.0"}}
-		err = suite.govKeeper.AddVote(suite.ctx, proposal.Id, suite.addrs[0], voteOptions, "")
+		err = suite.govKeeper.AddVote(suite.ctx, proposal.Id, suite.addrs[0], voteOptions, "", "")
 		suite.Require().NoError(err)
 
 		suite.Require().NoError(suite.govKeeper.DeleteProposal(suite.ctx, proposal.Id))
 
 		// add vote but proposal is deleted along with its VotingPeriodProposalKey
-		err = suite.govKeeper.AddVote(suite.ctx, proposal.Id, suite.addrs[0], voteOptions, "")
+		err = suite.govKeeper.AddVote(suite.ctx, proposal.Id, suite.addrs[0], voteOptions, "", "")
 		suite.Require().ErrorContains(err, ": inactive proposal")
 	}
 }
@@ -199,7 +199,7 @@ func (suite *KeeperTestSuite) TestCancelProposal() {
 	suite.Require().True(proposal3.VotingStartTime.Equal(suite.ctx.BlockHeader().Time))
 	// add vote
 	voteOptions := []*v1.WeightedVoteOption{{Option: v1.OptionYes, Weight: "1.0"}}
-	err = suite.govKeeper.AddVote(suite.ctx, proposal3ID, suite.addrs[0], voteOptions, "")
+	err = suite.govKeeper.AddVote(suite.ctx, proposal3ID, suite.addrs[0], voteOptions, "", "")
 	suite.Require().NoError(err)
 
 	testCases := []struct {
@@ -262,7 +262,7 @@ func (suite *KeeperTestSuite) TestCancelProposal() {
 
 				// add vote
 				voteOptions := []*v1.WeightedVoteOption{{Option: v1.OptionYes, Weight: "1.0"}}
-				err = suite.govKeeper.AddVote(suite.ctx, proposalID, suite.addrs[0], voteOptions, "")
+				err = suite.govKeeper.AddVote(suite.ctx, proposalID, suite.addrs[0], voteOptions, "", "")
 				suite.Require().NoError(err)
 				vote, err := suite.govKeeper.Votes.Get(suite.ctx, collections.Join(proposalID, suite.addrs[0]))
 				suite.Require().NoError(err)

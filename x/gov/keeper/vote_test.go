@@ -27,16 +27,16 @@ func TestVotes(t *testing.T) {
 
 	var invalidOption v1.VoteOption = 0x10
 
-	require.Error(t, govKeeper.AddVote(ctx, proposalID, addrs[0], v1.NewNonSplitVoteOption(v1.OptionYes), metadata), "proposal not on voting period")
-	require.Error(t, govKeeper.AddVote(ctx, 10, addrs[0], v1.NewNonSplitVoteOption(v1.OptionYes), ""), "invalid proposal ID")
+	require.Error(t, govKeeper.AddVote(ctx, proposalID, addrs[0], v1.NewNonSplitVoteOption(v1.OptionYes), "", metadata), "proposal not on voting period")
+	require.Error(t, govKeeper.AddVote(ctx, 10, addrs[0], v1.NewNonSplitVoteOption(v1.OptionYes), "", ""), "invalid proposal ID")
 
 	proposal.Status = v1.StatusVotingPeriod
 	govKeeper.SetProposal(ctx, proposal)
 
-	require.Error(t, govKeeper.AddVote(ctx, proposalID, addrs[0], v1.NewNonSplitVoteOption(invalidOption), ""), "invalid option")
+	require.Error(t, govKeeper.AddVote(ctx, proposalID, addrs[0], v1.NewNonSplitVoteOption(invalidOption), "", ""), "invalid option")
 
 	// Test first vote
-	require.NoError(t, govKeeper.AddVote(ctx, proposalID, addrs[0], v1.NewNonSplitVoteOption(v1.OptionAbstain), metadata))
+	require.NoError(t, govKeeper.AddVote(ctx, proposalID, addrs[0], v1.NewNonSplitVoteOption(v1.OptionAbstain), "", metadata))
 	vote, err := govKeeper.Votes.Get(ctx, collections.Join(proposalID, addrs[0]))
 	require.Nil(t, err)
 	require.Equal(t, addrs[0].String(), vote.Voter)
@@ -45,7 +45,7 @@ func TestVotes(t *testing.T) {
 	require.Equal(t, v1.OptionAbstain, vote.Options[0].Option)
 
 	// Test change of vote
-	require.NoError(t, govKeeper.AddVote(ctx, proposalID, addrs[0], v1.NewNonSplitVoteOption(v1.OptionYes), ""))
+	require.NoError(t, govKeeper.AddVote(ctx, proposalID, addrs[0], v1.NewNonSplitVoteOption(v1.OptionYes), "", ""))
 	vote, err = govKeeper.Votes.Get(ctx, collections.Join(proposalID, addrs[0]))
 	require.Nil(t, err)
 	require.Equal(t, addrs[0].String(), vote.Voter)
@@ -59,7 +59,7 @@ func TestVotes(t *testing.T) {
 		v1.NewWeightedVoteOption(v1.OptionNo, sdkmath.LegacyNewDecWithPrec(30, 2)),
 		v1.NewWeightedVoteOption(v1.OptionAbstain, sdkmath.LegacyNewDecWithPrec(5, 2)),
 		v1.NewWeightedVoteOption(v1.OptionNoWithVeto, sdkmath.LegacyNewDecWithPrec(5, 2)),
-	}, ""))
+	}, "", ""))
 	vote, err = govKeeper.Votes.Get(ctx, collections.Join(proposalID, addrs[1]))
 	require.Nil(t, err)
 	require.Equal(t, addrs[1].String(), vote.Voter)

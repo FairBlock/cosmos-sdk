@@ -93,7 +93,7 @@ func TestHooks(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, govHooksReceiver.AfterProposalDepositValid)
 
-	err = govKeeper.AddVote(ctx, p2.Id, addrs[0], v1.NewNonSplitVoteOption(v1.OptionYes), "")
+	err = govKeeper.AddVote(ctx, p2.Id, addrs[0], v1.NewNonSplitVoteOption(v1.OptionYes), "", "")
 	require.NoError(t, err)
 	require.True(t, govHooksReceiver.AfterProposalVoteValid)
 

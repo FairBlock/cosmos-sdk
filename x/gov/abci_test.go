@@ -400,7 +400,7 @@ func TestProposalPassedEndblocker(t *testing.T) {
 			deposits := initialModuleAccCoins.Add(proposal.TotalDeposit...).Add(proposalCoins...)
 			require.True(t, moduleAccCoins.Equal(deposits))
 
-			err = suite.GovKeeper.AddVote(ctx, proposal.Id, addrs[0], v1.NewNonSplitVoteOption(v1.OptionYes), "")
+			err = suite.GovKeeper.AddVote(ctx, proposal.Id, addrs[0], v1.NewNonSplitVoteOption(v1.OptionYes), "", "")
 			require.NoError(t, err)
 
 			newHeader := ctx.BlockHeader()
@@ -450,7 +450,7 @@ func TestEndBlockerProposalHandlerFailed(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, res)
 
-	err = suite.GovKeeper.AddVote(ctx, proposal.Id, addrs[0], v1.NewNonSplitVoteOption(v1.OptionYes), "")
+	err = suite.GovKeeper.AddVote(ctx, proposal.Id, addrs[0], v1.NewNonSplitVoteOption(v1.OptionYes), "", "")
 	require.NoError(t, err)
 
 	params, _ := suite.GovKeeper.Params.Get(ctx)
@@ -566,7 +566,7 @@ func TestExpeditedProposal_PassAndConversionToRegular(t *testing.T) {
 
 			if tc.expeditedPasses {
 				// Validator votes YES, letting the expedited proposal pass.
-				err = suite.GovKeeper.AddVote(ctx, proposal.Id, addrs[0], v1.NewNonSplitVoteOption(v1.OptionYes), "metadata")
+				err = suite.GovKeeper.AddVote(ctx, proposal.Id, addrs[0], v1.NewNonSplitVoteOption(v1.OptionYes), "", "metadata")
 				require.NoError(t, err)
 			}
 
@@ -621,7 +621,7 @@ func TestExpeditedProposal_PassAndConversionToRegular(t *testing.T) {
 
 			if tc.regularEventuallyPassing {
 				// Validator votes YES, letting the converted regular proposal pass.
-				err = suite.GovKeeper.AddVote(ctx, proposal.Id, addrs[0], v1.NewNonSplitVoteOption(v1.OptionYes), "metadata")
+				err = suite.GovKeeper.AddVote(ctx, proposal.Id, addrs[0], v1.NewNonSplitVoteOption(v1.OptionYes), "", "metadata")
 				require.NoError(t, err)
 			}
 
