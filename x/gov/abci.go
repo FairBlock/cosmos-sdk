@@ -166,8 +166,8 @@ func EndBlocker(ctx sdk.Context, keeper *keeper.Keeper) error {
 				params := keeper.GetParams(ctx)
 
 				ctx.EventManager().EmitEvent(
-					sdk.NewEvent(kstypes.StartSendGeneralKeyShareEventType,
-						sdk.NewAttribute(kstypes.StartSendGeneralKeyShareEventIdentity, proposal.Identity),
+					sdk.NewEvent(kstypes.StartSendGeneralKeyshareEventType,
+						sdk.NewAttribute(kstypes.StartSendGeneralKeyshareEventIdentity, proposal.Identity),
 					),
 				)
 
