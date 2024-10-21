@@ -131,7 +131,7 @@ func EndBlocker(ctx sdk.Context, keeper *keeper.Keeper) error {
 		tallyEndTime := proposal.VotingEndTime.Add(*tallyPeriod)
 
 		if proposal.HasEncryptedVotes {
-			if proposal.AggrKeyshare == "" && (ctx.BlockTime().Compare(tallyEndTime) >= 0) {
+			if proposal.DecryptionKey == "" && (ctx.BlockTime().Compare(tallyEndTime) >= 0) {
 				proposal.Status = v1.StatusFailed
 				tagValue = types.AttributeValueProposalFailed
 				logMsg = "failed"
@@ -173,8 +173,10 @@ func EndBlocker(ctx sdk.Context, keeper *keeper.Keeper) error {
 
 				// Directly make request to keyshare module if sourcechain (fairyring)
 				if params.IsSourceChain {
-					req := commontypes.GetAggrKeyshare{
-						Id:       &commontypes.GetAggrKeyshare_ProposalId{ProposalId: strconv.FormatUint(proposal.Id, 10)},
+					req := commontypes.GetDecryptionKey{
+						Id: &commontypes.GetDecryptionKey_ProposalId{
+							ProposalId: strconv.FormatUint(proposal.Id, 10),
+						},
 						Identity: proposal.Identity,
 					}
 
@@ -183,12 +185,13 @@ func EndBlocker(ctx sdk.Context, keeper *keeper.Keeper) error {
 				}
 
 				// else, make ibc tx to source chain
-				var packetData kstypes.GetAggrKeysharePacketData
+				var packetData kstypes.GetDecryptionKeyPacketData
 				sPort := keeper.GetPort(ctx)
 				packetData.Identity = proposal.Identity
 				timeoutTimestamp := ctx.BlockTime().Add(time.Second * 20).UnixNano()
 
-				_, err := keeper.TransmitGetAggrKeysharePacket(ctx,
+				_, err := keeper.TransmitGetDecryptionKeyPacket(
+					ctx,
 					packetData,
 					sPort,
 					params.ChannelId,
@@ -206,7 +209,7 @@ func EndBlocker(ctx sdk.Context, keeper *keeper.Keeper) error {
 
 				return false, err
 			}
-			if proposal.AggrKeyshare != "" {
+			if proposal.DecryptionKey != "" {
 				keeper.DecryptVotes(ctx, proposal)
 			} else {
 				return false, nil

@@ -15,10 +15,10 @@ import (
 	host "github.com/cosmos/ibc-go/v8/modules/core/24-host"
 )
 
-// TransmitRequestAggrKeysharePacket transmits the packet over IBC with the specified source port and source channel
-func (k Keeper) TransmitRequestAggrKeysharePacket(
+// TransmitRequestDecryptionKeyPacket transmits the packet over IBC with the specified source port and source channel
+func (k Keeper) TransmitRequestDecryptionKeyPacket(
 	ctx sdk.Context,
-	packetData kstypes.RequestAggrKeysharePacketData,
+	packetData kstypes.RequestDecryptionKeyPacketData,
 	sourcePort,
 	sourceChannel string,
 	timeoutHeight clienttypes.Height,
@@ -37,9 +37,14 @@ func (k Keeper) TransmitRequestAggrKeysharePacket(
 	return k.ibcKeeperFn().ChannelKeeper.SendPacket(ctx, channelCap, sourcePort, sourceChannel, timeoutHeight, timeoutTimestamp, packetBytes)
 }
 
-// OnAcknowledgementRequestAggrKeysharePacket responds to the the success or failure of a packet
+// OnAcknowledgementRequestDecryptionKeyPacket responds to the the success or failure of a packet
 // acknowledgement written on the receiving chain.
-func (k Keeper) OnAcknowledgementRequestAggrKeysharePacket(ctx sdk.Context, packet channeltypes.Packet, data kstypes.RequestAggrKeysharePacketData, ack channeltypes.Acknowledgement) error {
+func (k Keeper) OnAcknowledgementRequestDecryptionKeyPacket(
+	ctx sdk.Context,
+	packet channeltypes.Packet,
+	data kstypes.RequestDecryptionKeyPacketData,
+	ack channeltypes.Acknowledgement,
+) error {
 	switch dispatchedAck := ack.Response.(type) {
 	case *channeltypes.Acknowledgement_Error:
 
@@ -48,7 +53,7 @@ func (k Keeper) OnAcknowledgementRequestAggrKeysharePacket(ctx sdk.Context, pack
 		return nil
 	case *channeltypes.Acknowledgement_Result:
 		// Decode the packet acknowledgment
-		var packetAck kstypes.RequestAggrKeysharePacketAck
+		var packetAck kstypes.RequestDecryptionKeyPacketAck
 
 		if err := kstypes.ModuleCdc.UnmarshalJSON(dispatchedAck.Result, &packetAck); err != nil {
 			// The counter-party module doesn't implement the correct acknowledgment format
@@ -72,8 +77,12 @@ func (k Keeper) OnAcknowledgementRequestAggrKeysharePacket(ctx sdk.Context, pack
 	}
 }
 
-// OnTimeoutRequestAggrKeysharePacket responds to the case where a packet has not been transmitted because of a timeout
-func (k Keeper) OnTimeoutRequestAggrKeysharePacket(ctx sdk.Context, packet channeltypes.Packet, data kstypes.RequestAggrKeysharePacketData) error {
+// OnTimeoutRequestDecryptionKeyPacket responds to the case where a packet has not been transmitted because of a timeout
+func (k Keeper) OnTimeoutRequestDecryptionKeyPacket(
+	ctx sdk.Context,
+	packet channeltypes.Packet,
+	data kstypes.RequestDecryptionKeyPacketData,
+) error {
 	pID, _ := strconv.ParseUint(data.GetProposalId(), 10, 64)
 	proposal, found := k.GetProposal(ctx, pID)
 	if !found {
@@ -84,7 +93,7 @@ func (k Keeper) OnTimeoutRequestAggrKeysharePacket(ctx sdk.Context, packet chann
 		(proposal.Status == v1.ProposalStatus_PROPOSAL_STATUS_VOTING_PERIOD) {
 		timeoutTimestamp := ctx.BlockTime().Add(time.Second * 20).UnixNano()
 
-		_, _ = k.TransmitRequestAggrKeysharePacket(ctx,
+		_, _ = k.TransmitRequestDecryptionKeyPacket(ctx,
 			data,
 			packet.SourcePort,
 			packet.SourceChannel,

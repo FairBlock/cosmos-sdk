@@ -10,8 +10,12 @@ import (
 	channeltypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
 )
 
-// OnRecvAggrKeyshareDataPacket processes packet reception
-func (k Keeper) OnRecvAggrKeyshareDataPacket(ctx sdk.Context, packet channeltypes.Packet, data types.AggrKeyshareDataPacketData) (packetAck types.AggrKeyshareDataPacketAck, err error) {
+// OnRecvDecryptionKeyDataPacket processes packet reception
+func (k Keeper) OnRecvDecryptionKeyDataPacket(
+	ctx sdk.Context,
+	packet channeltypes.Packet,
+	data types.DecryptionKeyDataPacketData,
+) (packetAck types.DecryptionKeyPacketAck, err error) {
 	// validate packet data upon receiving
 	if err := data.ValidateBasic(); err != nil {
 		return packetAck, err
@@ -27,15 +31,20 @@ func (k Keeper) OnRecvAggrKeyshareDataPacket(ctx sdk.Context, packet channeltype
 		return packetAck, errors.New("Proposal not found")
 	}
 
-	proposal.AggrKeyshare = data.AggrKeyshare
+	proposal.DecryptionKey = data.DecryptionKey
 	k.SetProposal(ctx, proposal)
 
 	return packetAck, nil
 }
 
-// OnAcknowledgementAggrKeyshareDataPacket responds to the the success or failure of a packet
+// OnAcknowledgementDecryptionKeyDataPacket responds to the the success or failure of a packet
 // acknowledgement written on the receiving chain.
-func (k Keeper) OnAcknowledgementAggrKeyshareDataPacket(ctx sdk.Context, packet channeltypes.Packet, data types.AggrKeyshareDataPacketData, ack channeltypes.Acknowledgement) error {
+func (k Keeper) OnAcknowledgementDecryptionKeyDataPacket(
+	ctx sdk.Context,
+	packet channeltypes.Packet,
+	data types.DecryptionKeyDataPacketData,
+	ack channeltypes.Acknowledgement,
+) error {
 	switch dispatchedAck := ack.Response.(type) {
 	case *channeltypes.Acknowledgement_Error:
 
@@ -45,7 +54,7 @@ func (k Keeper) OnAcknowledgementAggrKeyshareDataPacket(ctx sdk.Context, packet 
 		return nil
 	case *channeltypes.Acknowledgement_Result:
 		// Decode the packet acknowledgment
-		var packetAck types.AggrKeyshareDataPacketAck
+		var packetAck types.DecryptionKeyPacketAck
 
 		if err := types.ModuleCdc.UnmarshalJSON(dispatchedAck.Result, &packetAck); err != nil {
 			// The counter-party module doesn't implement the correct acknowledgment format
@@ -61,8 +70,12 @@ func (k Keeper) OnAcknowledgementAggrKeyshareDataPacket(ctx sdk.Context, packet 
 	}
 }
 
-// OnTimeoutAggrKeyshareDataPacket responds to the case where a packet has not been transmitted because of a timeout
-func (k Keeper) OnTimeoutAggrKeyshareDataPacket(ctx sdk.Context, packet channeltypes.Packet, data types.AggrKeyshareDataPacketData) error {
+// OnTimeoutDecryptionKeyDataPacket responds to the case where a packet has not been transmitted because of a timeout
+func (k Keeper) OnTimeoutDecryptionKeyDataPacket(
+	ctx sdk.Context,
+	packet channeltypes.Packet,
+	data types.DecryptionKeyDataPacketData,
+) error {
 
 	// TODO: packet timeout logic
 
@@ -80,7 +93,7 @@ func (k Keeper) ProcessAggrKeyshare(ctx sdk.Context, pID string, aggrKeyshare st
 		return errors.New("Proposal not found")
 	}
 
-	proposal.AggrKeyshare = aggrKeyshare
+	proposal.DecryptionKey = aggrKeyshare
 	k.SetProposal(ctx, proposal)
 	return nil
 }

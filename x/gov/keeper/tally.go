@@ -182,7 +182,7 @@ func (keeper Keeper) DecryptVotes(ctx sdk.Context, proposal v1.Proposal) {
 	publicKeyPoint := suite.G1().Point()
 	publicKeyPoint.UnmarshalBinary(publicKeyByte)
 
-	keyByte, _ := hex.DecodeString(proposal.AggrKeyshare)
+	keyByte, _ := hex.DecodeString(proposal.DecryptionKey)
 
 	skPoint := suite.G2().Point()
 	skPoint.UnmarshalBinary(keyByte)

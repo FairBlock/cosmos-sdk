@@ -129,8 +129,8 @@ func (keeper Keeper) SubmitProposal(ctx context.Context, messages []sdk.Msg, met
 
 	// Directly make request to keyshare module if sourcechain (fairyring)
 	if params.IsSourceChain {
-		req := commontypes.RequestAggrKeyshare{
-			Id: &commontypes.RequestAggrKeyshare_ProposalId{
+		req := commontypes.RequestDecryptionKey{
+			Id: &commontypes.RequestDecryptionKey_ProposalId{
 				ProposalId: strconv.FormatUint(proposalID, 10),
 			},
 			EstimatedDelay: &delay,
@@ -149,17 +149,17 @@ func (keeper Keeper) SubmitProposal(ctx context.Context, messages []sdk.Msg, met
 	}
 
 	// else, make ibc tx to source chain
-	var packetData kstypes.RequestAggrKeysharePacketData
+	var packetData kstypes.RequestDecryptionKeyPacketData
 	sPort := keeper.GetPort(sdkCtx)
-	packetData = kstypes.RequestAggrKeysharePacketData{
-		Id: &kstypes.RequestAggrKeysharePacketData_ProposalId{
+	packetData = kstypes.RequestDecryptionKeyPacketData{
+		Id: &kstypes.RequestDecryptionKeyPacketData_ProposalId{
 			ProposalId: strconv.FormatUint(proposalID, 10),
 		},
 		EstimatedDelay: &delay,
 	}
 	timeoutTimestamp := sdkCtx.BlockTime().Add(time.Second * 20).UnixNano()
 
-	_, _ = keeper.TransmitRequestAggrKeysharePacket(sdkCtx,
+	_, _ = keeper.TransmitRequestDecryptionKeyPacket(sdkCtx,
 		packetData,
 		sPort,
 		params.ChannelId,

@@ -1,8 +1,6 @@
 package keeper
 
 import (
-	"fmt"
-
 	"cosmossdk.io/store/prefix"
 	storetypes "cosmossdk.io/store/types"
 	commontypes "github.com/Fairblock/fairyring/x/common/types"
@@ -15,7 +13,7 @@ import (
 func (k Keeper) GetRequestQueueEntry(
 	ctx sdk.Context,
 	proposalID string,
-) (val commontypes.RequestAggrKeyshare, found bool) {
+) (val commontypes.RequestDecryptionKey, found bool) {
 	store := prefix.NewStore(runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx)), types.KeyPrefix(types.ReqQueueKeyPrefix))
 
 	b := store.Get(types.QueueKey(
@@ -32,24 +30,15 @@ func (k Keeper) GetRequestQueueEntry(
 // SetQueueEntry sets a queue entry by its identity
 func (k Keeper) SetReqQueueEntry(
 	ctx sdk.Context,
-	val commontypes.RequestAggrKeyshare,
+	val commontypes.RequestDecryptionKey,
 ) {
 	store := prefix.NewStore(runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx)), types.KeyPrefix(types.ReqQueueKeyPrefix))
-
 	entry := k.cdc.MustMarshal(&val)
-	fmt.Println("\n\n\n\nattempting set into req q: ", val, "\n\n\n\n")
 
 	store.Set(
 		types.QueueKey(val.GetProposalId()),
 		entry,
 	)
-
-	_, found := k.GetRequestQueueEntry(ctx, val.GetProposalId())
-	if found {
-		fmt.Println("\n\n\n\nsuccessfully set\n\n\n\n")
-	} else {
-		fmt.Println("\n\n\n\nfailed to set\n\n\n\n")
-	}
 }
 
 // RemoveQueueEntry removes an entry from the store
@@ -57,21 +46,19 @@ func (k Keeper) RemoveReqQueueEntry(
 	ctx sdk.Context,
 	proposalID string,
 ) {
-	fmt.Println("\n\n\n\nattempting removal from req q: ", proposalID, "\n\n\n\n")
 	store := prefix.NewStore(runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx)), types.KeyPrefix(types.ReqQueueKeyPrefix))
 	store.Delete(types.QueueKey(proposalID))
-	fmt.Println("\n\n\n\nsuccessfully deleted\n\n\n\n")
 }
 
 // GetAllGenEncTxQueueEntry returns all GenEncTxQueue entries
-func (k Keeper) GetAllReqQueueEntry(ctx sdk.Context) (list []commontypes.RequestAggrKeyshare) {
+func (k Keeper) GetAllReqQueueEntry(ctx sdk.Context) (list []commontypes.RequestDecryptionKey) {
 	store := prefix.NewStore(runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx)), types.KeyPrefix(types.ReqQueueKeyPrefix))
 	iterator := storetypes.KVStorePrefixIterator(store, []byte{})
 
 	defer iterator.Close()
 
 	for ; iterator.Valid(); iterator.Next() {
-		var val commontypes.RequestAggrKeyshare
+		var val commontypes.RequestDecryptionKey
 		k.cdc.MustUnmarshal(iterator.Value(), &val)
 		list = append(list, val)
 	}
@@ -82,7 +69,7 @@ func (k Keeper) GetAllReqQueueEntry(ctx sdk.Context) (list []commontypes.Request
 func (k Keeper) GetSignalQueueEntry(
 	ctx sdk.Context,
 	proposalID string,
-) (val commontypes.GetAggrKeyshare, found bool) {
+) (val commontypes.GetDecryptionKey, found bool) {
 	store := prefix.NewStore(runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx)), types.KeyPrefix(types.SignalQueueKeyPrefix))
 	b := store.Get(types.QueueKey(
 		proposalID,
@@ -98,7 +85,7 @@ func (k Keeper) GetSignalQueueEntry(
 // SetQueueEntry sets a queue entry by its identity
 func (k Keeper) SetSignalQueueEntry(
 	ctx sdk.Context,
-	val commontypes.GetAggrKeyshare,
+	val commontypes.GetDecryptionKey,
 ) {
 	store := prefix.NewStore(runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx)), types.KeyPrefix(types.SignalQueueKeyPrefix))
 	entry := k.cdc.MustMarshal(&val)
@@ -118,14 +105,14 @@ func (k Keeper) RemoveSignalQueueEntry(
 }
 
 // GetAllGenEncTxQueueEntry returns all GenEncTxQueue entries
-func (k Keeper) GetAllSignalQueueEntry(ctx sdk.Context) (list []commontypes.GetAggrKeyshare) {
+func (k Keeper) GetAllSignalQueueEntry(ctx sdk.Context) (list []commontypes.GetDecryptionKey) {
 	store := prefix.NewStore(runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx)), types.KeyPrefix(types.SignalQueueKeyPrefix))
 	iterator := storetypes.KVStorePrefixIterator(store, []byte{})
 
 	defer iterator.Close()
 
 	for ; iterator.Valid(); iterator.Next() {
-		var val commontypes.GetAggrKeyshare
+		var val commontypes.GetDecryptionKey
 		k.cdc.MustUnmarshal(iterator.Value(), &val)
 		list = append(list, val)
 	}

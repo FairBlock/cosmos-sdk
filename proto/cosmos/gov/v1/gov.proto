@@ -119,8 +119,8 @@ message Proposal {
 
   string pubkey = 18;
 
-  // aggregated keyshare is used to decrypt the encrypted votes during the tally phase
-  string aggr_keyshare = 19;
+  // decryption key is used to decrypt the encrypted votes during the tally phase
+  string decryption_key = 19;
 }
 
 // ProposalStatus enumerates the valid statuses of a proposal.

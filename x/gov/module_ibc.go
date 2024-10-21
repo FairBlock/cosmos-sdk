@@ -41,10 +41,6 @@ func (im IBCModule) OnChanOpenInit(
 	counterparty channeltypes.Counterparty,
 	version string,
 ) (string, error) {
-
-	fmt.Println("\n\n\n\n OnChanOpenInit gov\n\n\n\n")
-	fmt.Println(im.keeper.ScopedKeeper())
-
 	// Require portID is the portID module is bound to
 	boundPort := im.keeper.GetPort(ctx)
 	if boundPort != portID {
@@ -60,8 +56,6 @@ func (im IBCModule) OnChanOpenInit(
 		return "", err
 	}
 
-	fmt.Println("\n\n\n\n OnChanOpenInit gov\n\n\n\n", version)
-
 	return version, nil
 }
 
@@ -76,9 +70,6 @@ func (im IBCModule) OnChanOpenTry(
 	counterparty channeltypes.Counterparty,
 	counterpartyVersion string,
 ) (string, error) {
-
-	fmt.Println("\n\n\n\n OnChanOpenTry gov\n\n\n\n")
-
 	// Require portID is the portID module is bound to
 	boundPort := im.keeper.GetPort(ctx)
 	if boundPort != portID {
@@ -99,9 +90,6 @@ func (im IBCModule) OnChanOpenTry(
 			return "", err
 		}
 	}
-
-	fmt.Println("\n\n\n\n OnChanOpenTry gov\n\n\n\n")
-
 	return types.Version, nil
 }
 
@@ -113,13 +101,9 @@ func (im IBCModule) OnChanOpenAck(
 	_,
 	counterpartyVersion string,
 ) error {
-	fmt.Println("\n\n\n\n OnChanOpenAck gov\n\n\n\n")
-
 	if counterpartyVersion != types.Version {
 		return sdkerrors.Wrapf(kstypes.ErrInvalidVersion, "invalid counterparty version: %s, expected %s", counterpartyVersion, types.Version)
 	}
-	fmt.Println("\n\n\n\n OnChanOpenAck gov\n\n\n\n")
-
 	return nil
 }
 
@@ -129,8 +113,6 @@ func (im IBCModule) OnChanOpenConfirm(
 	portID,
 	channelID string,
 ) error {
-	fmt.Println("\n\n\n\n OnChanOpenConfirm gov\n\n\n\n")
-
 	// im.keeper.SetChannel(ctx, channelID)
 	return nil
 }
@@ -170,8 +152,11 @@ func (im IBCModule) OnRecvPacket(
 	// Dispatch packet
 	switch packet := modulePacketData.Packet.(type) {
 
-	case *kstypes.KeysharePacketData_AggrKeyshareDataPacket:
-		packetAck, err := im.keeper.OnRecvAggrKeyshareDataPacket(ctx, modulePacket, *packet.AggrKeyshareDataPacket)
+	case *kstypes.KeysharePacketData_DecryptionKeyDataPacket:
+		packetAck, err := im.keeper.OnRecvDecryptionKeyDataPacket(
+			ctx, modulePacket,
+			*packet.DecryptionKeyDataPacket,
+		)
 		if err != nil {
 			ack = channeltypes.NewErrorAcknowledgement(err)
 		} else {
@@ -181,7 +166,7 @@ func (im IBCModule) OnRecvPacket(
 		}
 		ctx.EventManager().EmitEvent(
 			sdk.NewEvent(
-				kstypes.EventTypeAggrKeyshareDataPacket,
+				kstypes.EventTypeDecryptionKeyDataPacket,
 				sdk.NewAttribute(sdk.AttributeKeyModule, types.ModuleName),
 				sdk.NewAttribute(kstypes.AttributeKeyAckSuccess, fmt.Sprintf("%t", err != nil)),
 			),
@@ -219,18 +204,28 @@ func (im IBCModule) OnAcknowledgementPacket(
 
 	// Dispatch packet
 	switch packet := modulePacketData.Packet.(type) {
-	case *kstypes.KeysharePacketData_RequestAggrKeysharePacket:
-		err := im.keeper.OnAcknowledgementRequestAggrKeysharePacket(ctx, modulePacket, *packet.RequestAggrKeysharePacket, ack)
+	case *kstypes.KeysharePacketData_RequestDecryptionKeyPacket:
+		err := im.keeper.OnAcknowledgementRequestDecryptionKeyPacket(
+			ctx,
+			modulePacket,
+			*packet.RequestDecryptionKeyPacket,
+			ack,
+		)
 		if err != nil {
 			return err
 		}
-		eventType = kstypes.EventTypeRequestAggrKeysharePacket
-	case *kstypes.KeysharePacketData_GetAggrKeysharePacket:
-		err := im.keeper.OnAcknowledgementGetAggrKeysharePacket(ctx, modulePacket, *packet.GetAggrKeysharePacket, ack)
+		eventType = kstypes.EventTypeRequestDecryptionKeyPacket
+	case *kstypes.KeysharePacketData_GetDecryptionKeyPacket:
+		err := im.keeper.OnAcknowledgementGetDecryptionKeyPacket(
+			ctx,
+			modulePacket,
+			*packet.GetDecryptionKeyPacket,
+			ack,
+		)
 		if err != nil {
 			return err
 		}
-		eventType = kstypes.EventTypeGetAggrKeysharePacket
+		eventType = kstypes.EventTypeGetDecryptionKeyPacket
 
 	// this line is used by starport scaffolding # ibc/packet/module/ack
 	default:
@@ -280,20 +275,32 @@ func (im IBCModule) OnTimeoutPacket(
 	// Dispatch packet
 	switch packet := modulePacketData.Packet.(type) {
 
-	case *kstypes.KeysharePacketData_RequestAggrKeysharePacket:
-		err := im.keeper.OnTimeoutRequestAggrKeysharePacket(ctx, modulePacket, *packet.RequestAggrKeysharePacket)
+	case *kstypes.KeysharePacketData_RequestDecryptionKeyPacket:
+		err := im.keeper.OnTimeoutRequestDecryptionKeyPacket(
+			ctx,
+			modulePacket,
+			*packet.RequestDecryptionKeyPacket,
+		)
 		if err != nil {
 			return err
 		}
 
-	case *kstypes.KeysharePacketData_GetAggrKeysharePacket:
-		err := im.keeper.OnTimeoutGetAggrKeysharePacket(ctx, modulePacket, *packet.GetAggrKeysharePacket)
+	case *kstypes.KeysharePacketData_GetDecryptionKeyPacket:
+		err := im.keeper.OnTimeoutGetDecryptionKeyPacket(
+			ctx,
+			modulePacket,
+			*packet.GetDecryptionKeyPacket,
+		)
 		if err != nil {
 			return err
 		}
 
-	case *kstypes.KeysharePacketData_AggrKeyshareDataPacket:
-		err := im.keeper.OnTimeoutAggrKeyshareDataPacket(ctx, modulePacket, *packet.AggrKeyshareDataPacket)
+	case *kstypes.KeysharePacketData_DecryptionKeyDataPacket:
+		err := im.keeper.OnTimeoutDecryptionKeyDataPacket(
+			ctx,
+			modulePacket,
+			*packet.DecryptionKeyDataPacket,
+		)
 		if err != nil {
 			return err
 		}

@@ -12,16 +12,19 @@ import (
 	host "github.com/cosmos/ibc-go/v8/modules/core/24-host"
 )
 
-// TransmitGetAggrKeysharePacket transmits the packet over IBC with the specified source port and source channel
-func (k Keeper) TransmitGetAggrKeysharePacket(
+// TransmitGetDecryptionKeyPacket transmits the packet over IBC with the specified source port and source channel
+func (k Keeper) TransmitGetDecryptionKeyPacket(
 	ctx sdk.Context,
-	packetData types.GetAggrKeysharePacketData,
+	packetData types.GetDecryptionKeyPacketData,
 	sourcePort,
 	sourceChannel string,
 	timeoutHeight clienttypes.Height,
 	timeoutTimestamp uint64,
 ) (uint64, error) {
-	channelCap, ok := k.ScopedKeeper().GetCapability(ctx, host.ChannelCapabilityPath(sourcePort, sourceChannel))
+	channelCap, ok := k.ScopedKeeper().GetCapability(
+		ctx,
+		host.ChannelCapabilityPath(sourcePort, sourceChannel),
+	)
 	if !ok {
 		return 0, sdkerrors.Wrap(channeltypes.ErrChannelCapabilityNotFound, "module does not own channel capability")
 	}
@@ -31,9 +34,14 @@ func (k Keeper) TransmitGetAggrKeysharePacket(
 	return k.ibcKeeperFn().ChannelKeeper.SendPacket(ctx, channelCap, sourcePort, sourceChannel, timeoutHeight, timeoutTimestamp, packetBytes)
 }
 
-// OnAcknowledgementGetAggrKeysharePacket responds to the the success or failure of a packet
+// OnAcknowledgementGetDecryptionKeyPacket responds to the the success or failure of a packet
 // acknowledgement written on the receiving chain.
-func (k Keeper) OnAcknowledgementGetAggrKeysharePacket(ctx sdk.Context, packet channeltypes.Packet, data types.GetAggrKeysharePacketData, ack channeltypes.Acknowledgement) error {
+func (k Keeper) OnAcknowledgementGetDecryptionKeyPacket(
+	ctx sdk.Context,
+	packet channeltypes.Packet,
+	data types.GetDecryptionKeyPacketData,
+	ack channeltypes.Acknowledgement,
+) error {
 	switch dispatchedAck := ack.Response.(type) {
 	case *channeltypes.Acknowledgement_Error:
 
@@ -42,7 +50,7 @@ func (k Keeper) OnAcknowledgementGetAggrKeysharePacket(ctx sdk.Context, packet c
 		return nil
 	case *channeltypes.Acknowledgement_Result:
 		// Decode the packet acknowledgment
-		var packetAck types.GetAggrKeysharePacketAck
+		var packetAck types.GetDecryptionKeyPacketAck
 
 		if err := types.ModuleCdc.UnmarshalJSON(dispatchedAck.Result, &packetAck); err != nil {
 			// The counter-party module doesn't implement the correct acknowledgment format
@@ -56,8 +64,12 @@ func (k Keeper) OnAcknowledgementGetAggrKeysharePacket(ctx sdk.Context, packet c
 	}
 }
 
-// OnTimeoutGetAggrKeysharePacket responds to the case where a packet has not been transmitted because of a timeout
-func (k Keeper) OnTimeoutGetAggrKeysharePacket(ctx sdk.Context, packet channeltypes.Packet, data types.GetAggrKeysharePacketData) error {
+// OnTimeoutGetDecryptionKeyPacket responds to the case where a packet has not been transmitted because of a timeout
+func (k Keeper) OnTimeoutGetDecryptionKeyPacket(
+	ctx sdk.Context,
+	packet channeltypes.Packet,
+	data types.GetDecryptionKeyPacketData,
+) error {
 
 	// No processing is required since GetAggrKeysharePacket is sent
 	// every block till a response is received or the tally period is over.
