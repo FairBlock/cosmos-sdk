@@ -189,8 +189,7 @@ replace (
 	github.com/99designs/keyring => github.com/cosmos/keyring v1.2.0
 	// use cosmos fork of keyring
 	github.com/CosmWasm/wasmd => github.com/FairBlock/wasmd v0.50.6-fairyring
-	// github.com/Fairblock/fairyring => github.com/FairBlock/fairyring v0.8.0
-	github.com/Fairblock/fairyring => ../fairyring
+	github.com/Fairblock/fairyring => github.com/FairBlock/fairyring v0.10.0
 
 	// dgrijalva/jwt-go is deprecated and doesn't receive security updates.
 	// TODO: remove it: https://github.com/cosmos/cosmos-sdk/issues/13134

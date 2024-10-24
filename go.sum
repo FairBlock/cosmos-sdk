@@ -56,6 +56,8 @@ github.com/FairBlock/DistributedIBE v0.0.0-20231211202607-d457df6869db h1:wmRvJR
 github.com/FairBlock/DistributedIBE v0.0.0-20231211202607-d457df6869db/go.mod h1:qXpLBzZiSdWoweJkE/lAIPedf6GOl7WsYM8rxrZCCDk=
 github.com/FairBlock/cosmossdk-api v0.7.5 h1:8twHn1VgmAqLGI7ezh0OPfm1ZxIYRSEPaQW1YssbYWY=
 github.com/FairBlock/cosmossdk-api v0.7.5/go.mod h1:IcxpYS5fMemZGqyYtErK7OqvdM0C8kdW3dq8Q/XIG38=
+github.com/FairBlock/fairyring v0.10.0 h1:X+uEklkYE4jUEUMDDhtlTZylOs/tqQUmDVy9/k0+Emg=
+github.com/FairBlock/fairyring v0.10.0/go.mod h1:qq328GY5VsUyP0fSSyb63TtmhwYiKQKgGlOU9sBUapY=
 github.com/FairBlock/wasmd v0.50.6-fairyring h1:3yWtEoKV7QzmOJSghNXJUYX9fXteBoE2MG6jIA8ztYs=
 github.com/FairBlock/wasmd v0.50.6-fairyring/go.mod h1:f0oj8Oy6bzleydH5ytWMqQD7DCp23b2VKkdsTVmiLrE=
 github.com/Knetic/govaluate v3.0.1-0.20171022003610-9aa49832a739+incompatible/go.mod h1:r7JcOSlj0wfOMncg0iLm8Leh48TZaKVeNIfJntJ2wa0=
