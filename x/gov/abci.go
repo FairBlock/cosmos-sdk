@@ -174,10 +174,9 @@ func EndBlocker(ctx sdk.Context, keeper *keeper.Keeper) error {
 				// Directly make request to keyshare module if sourcechain (fairyring)
 				if params.IsSourceChain {
 					req := commontypes.GetDecryptionKey{
-						Id: &commontypes.GetDecryptionKey_ProposalId{
-							ProposalId: strconv.FormatUint(proposal.Id, 10),
-						},
-						Identity: proposal.Identity,
+						IsGovernanceProposal: true,
+						ProposalId:           strconv.FormatUint(proposal.Id, 10),
+						Identity:             proposal.Identity,
 					}
 
 					keeper.SetSignalQueueEntry(ctx, req)
