@@ -58,6 +58,8 @@ github.com/FairBlock/cosmossdk-api v0.7.5 h1:8twHn1VgmAqLGI7ezh0OPfm1ZxIYRSEPaQW
 github.com/FairBlock/cosmossdk-api v0.7.5/go.mod h1:IcxpYS5fMemZGqyYtErK7OqvdM0C8kdW3dq8Q/XIG38=
 github.com/FairBlock/wasmd v0.50.6-fairyring h1:3yWtEoKV7QzmOJSghNXJUYX9fXteBoE2MG6jIA8ztYs=
 github.com/FairBlock/wasmd v0.50.6-fairyring/go.mod h1:f0oj8Oy6bzleydH5ytWMqQD7DCp23b2VKkdsTVmiLrE=
+github.com/Fairblock/fairyring v0.10.2 h1:X/ycHy6WULYv8AEYQyEG0iGuYNvwfcmvBnWL0qhCleA=
+github.com/Fairblock/fairyring v0.10.2/go.mod h1:VlDG8BL4mtyIwhaYqFsMR5cRBpUJOUBbhKLzg/KbXSY=
 github.com/Knetic/govaluate v3.0.1-0.20171022003610-9aa49832a739+incompatible/go.mod h1:r7JcOSlj0wfOMncg0iLm8Leh48TZaKVeNIfJntJ2wa0=
 github.com/Microsoft/go-winio v0.6.1 h1:9/kr64B9VUZrLm5YYwbGtUJnMgqWVOdUAXu6Migciow=
 github.com/Microsoft/go-winio v0.6.1/go.mod h1:LRdKpFKfdobln8UmuiYcKPot9D2v6svN5+sAH+4kjUM=

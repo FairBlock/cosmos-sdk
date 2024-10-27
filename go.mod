@@ -14,7 +14,7 @@ require (
 	cosmossdk.io/x/tx v0.13.3
 	github.com/99designs/keyring v1.2.1
 	github.com/FairBlock/DistributedIBE v0.0.0-20231211202607-d457df6869db
-	github.com/Fairblock/fairyring v0.10.0
+	github.com/Fairblock/fairyring v0.10.2
 	github.com/bgentry/speakeasy v0.1.1-0.20220910012023-760eaf8b6816
 	github.com/bits-and-blooms/bitset v1.8.0
 	github.com/chzyer/readline v1.5.1
@@ -189,7 +189,6 @@ replace (
 	github.com/99designs/keyring => github.com/cosmos/keyring v1.2.0
 	// use cosmos fork of keyring
 	github.com/CosmWasm/wasmd => github.com/FairBlock/wasmd v0.50.6-fairyring
-	github.com/Fairblock/fairyring => ../fairyring
 
 	// dgrijalva/jwt-go is deprecated and doesn't receive security updates.
 	// TODO: remove it: https://github.com/cosmos/cosmos-sdk/issues/13134
