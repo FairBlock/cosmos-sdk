@@ -189,6 +189,7 @@ func EndBlocker(ctx sdk.Context, keeper *keeper.Keeper) error {
 				packetData.Identity = proposal.Identity
 				timeoutTimestamp := ctx.BlockTime().Add(time.Second * 20).UnixNano()
 
+				fmt.Println("\n\n\n\nTransmitting GetDecryptionKeyPacketData packet\n\n\n\n")
 				_, err := keeper.TransmitGetDecryptionKeyPacket(
 					ctx,
 					packetData,

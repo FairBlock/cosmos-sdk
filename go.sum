@@ -56,7 +56,7 @@ github.com/FairBlock/DistributedIBE v0.0.0-20231211202607-d457df6869db h1:wmRvJR
 github.com/FairBlock/DistributedIBE v0.0.0-20231211202607-d457df6869db/go.mod h1:qXpLBzZiSdWoweJkE/lAIPedf6GOl7WsYM8rxrZCCDk=
 github.com/FairBlock/cosmossdk-api v0.7.5 h1:8twHn1VgmAqLGI7ezh0OPfm1ZxIYRSEPaQW1YssbYWY=
 github.com/FairBlock/cosmossdk-api v0.7.5/go.mod h1:IcxpYS5fMemZGqyYtErK7OqvdM0C8kdW3dq8Q/XIG38=
-github.com/FairBlock/fairyring v0.10.2 h1:N9LOX8GrJXNjS4SrXGlXFZ9eJG6e8g3QeW2mfLU1yK8=
+github.com/FairBlock/fairyring v0.10.2 h1:PePKYDk3wHoPlDXD7TCpVSdmJRub8sxQJPoTv4/kRKk=
 github.com/FairBlock/fairyring v0.10.2/go.mod h1:VlDG8BL4mtyIwhaYqFsMR5cRBpUJOUBbhKLzg/KbXSY=
 github.com/FairBlock/wasmd v0.50.6-fairyring h1:3yWtEoKV7QzmOJSghNXJUYX9fXteBoE2MG6jIA8ztYs=
 github.com/FairBlock/wasmd v0.50.6-fairyring/go.mod h1:f0oj8Oy6bzleydH5ytWMqQD7DCp23b2VKkdsTVmiLrE=

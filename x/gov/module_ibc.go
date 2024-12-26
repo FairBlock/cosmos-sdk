@@ -142,6 +142,8 @@ func (im IBCModule) OnRecvPacket(
 	modulePacket channeltypes.Packet,
 	relayer sdk.AccAddress,
 ) ibcexported.Acknowledgement {
+	fmt.Println("\n\n\n\nReceived Packet\n\n\n\n")
+
 	var ack channeltypes.Acknowledgement
 
 	var modulePacketData kstypes.KeysharePacketData
@@ -153,11 +155,13 @@ func (im IBCModule) OnRecvPacket(
 	switch packet := modulePacketData.Packet.(type) {
 
 	case *kstypes.KeysharePacketData_DecryptionKeyDataPacket:
+		fmt.Println("\n\n\n\nReceived Decryption Key Packet\n\n\n\n")
 		packetAck, err := im.keeper.OnRecvDecryptionKeyDataPacket(
 			ctx, modulePacket,
 			*packet.DecryptionKeyDataPacket,
 		)
 		if err != nil {
+			fmt.Println("\n\n\n\nError Processing Packet: ", err, "\n\n\n\n")
 			ack = channeltypes.NewErrorAcknowledgement(err)
 		} else {
 			// Encode packet acknowledgment

@@ -32,7 +32,10 @@ func (k Keeper) OnRecvDecryptionKeyDataPacket(
 	}
 
 	proposal.DecryptionKey = data.DecryptionKey
-	k.SetProposal(ctx, proposal)
+	err = k.SetProposal(ctx, proposal)
+	if err != nil {
+		return packetAck, err
+	}
 
 	return packetAck, nil
 }
