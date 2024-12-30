@@ -192,6 +192,8 @@ func (im IBCModule) OnAcknowledgementPacket(
 	acknowledgement []byte,
 	relayer sdk.AccAddress,
 ) error {
+	fmt.Println("\n\n\n\nReceived Ack Packet\n\n\n\n")
+
 	var ack channeltypes.Acknowledgement
 	if err := kstypes.ModuleCdc.UnmarshalJSON(acknowledgement, &ack); err != nil {
 		return sdkerrors.Wrapf(cosmoserror.ErrUnknownRequest, "cannot unmarshal packet acknowledgement: %v", err)
@@ -227,6 +229,7 @@ func (im IBCModule) OnAcknowledgementPacket(
 			ack,
 		)
 		if err != nil {
+			fmt.Println("\n\n\n Error evaluating OnAcknowledgementGetDecryptionKeyPacket", err, "\n\n\n")
 			return err
 		}
 		eventType = kstypes.EventTypeGetDecryptionKeyPacket
@@ -271,6 +274,8 @@ func (im IBCModule) OnTimeoutPacket(
 	modulePacket channeltypes.Packet,
 	relayer sdk.AccAddress,
 ) error {
+	fmt.Println("\n\n\n\nReceived timeout Packet\n\n\n\n")
+
 	var modulePacketData kstypes.KeysharePacketData
 	if err := modulePacketData.Unmarshal(modulePacket.GetData()); err != nil {
 		return sdkerrors.Wrapf(cosmoserror.ErrUnknownRequest, "cannot unmarshal packet data: %s", err.Error())

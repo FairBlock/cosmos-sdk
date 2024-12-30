@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/Fairblock/fairyring/x/keyshare/types"
 
@@ -44,7 +45,7 @@ func (k Keeper) OnAcknowledgementGetDecryptionKeyPacket(
 ) error {
 	switch dispatchedAck := ack.Response.(type) {
 	case *channeltypes.Acknowledgement_Error:
-
+		fmt.Println("\n\n\n ACK Err: ", dispatchedAck.Error, "\n\n\n")
 		// TODO: failed acknowledgement logic
 		_ = dispatchedAck.Error
 		return nil
