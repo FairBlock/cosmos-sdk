@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
 	"time"
 
@@ -45,6 +46,7 @@ func (k Keeper) OnAcknowledgementRequestDecryptionKeyPacket(
 	data kstypes.RequestDecryptionKeyPacketData,
 	ack channeltypes.Acknowledgement,
 ) error {
+	fmt.Println("\n\n\n\nOnAcknowledgementRequestDecryptionKeyPacket\n\n\n\n")
 	switch dispatchedAck := ack.Response.(type) {
 	case *channeltypes.Acknowledgement_Error:
 
@@ -68,6 +70,8 @@ func (k Keeper) OnAcknowledgementRequestDecryptionKeyPacket(
 
 		proposal.Identity = packetAck.Identity
 		proposal.Pubkey = packetAck.Pubkey
+
+		fmt.Println("\n\n\n\nOnAcknowledgementRequestDecryptionKeyPacket Acknowledgement_Result\n\n\n\n")
 
 		k.SetProposal(ctx, proposal)
 		return nil

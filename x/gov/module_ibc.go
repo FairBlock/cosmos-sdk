@@ -203,6 +203,7 @@ func (im IBCModule) OnAcknowledgementPacket(
 
 	var modulePacketData kstypes.KeysharePacketData
 	if err := kstypes.ModuleCdc.UnmarshalJSON(modulePacket.GetData(), &modulePacketData); err != nil {
+		fmt.Println("\n\n\n\nCan't unmarshal Ack Packet\n\n\n\n")
 		return sdkerrors.Wrapf(cosmoserror.ErrUnknownRequest, "cannot unmarshal packet data: %s", err.Error())
 	}
 

@@ -43,6 +43,7 @@ func (k Keeper) OnAcknowledgementGetDecryptionKeyPacket(
 	data types.GetDecryptionKeyPacketData,
 	ack channeltypes.Acknowledgement,
 ) error {
+	fmt.Println("\n\n\n\nOnAcknowledgementGetDecryptionKeyPacket\n\n\n\n")
 	switch dispatchedAck := ack.Response.(type) {
 	case *channeltypes.Acknowledgement_Error:
 		fmt.Println("\n\n\n ACK Err: ", dispatchedAck.Error, "\n\n\n")
@@ -57,7 +58,7 @@ func (k Keeper) OnAcknowledgementGetDecryptionKeyPacket(
 			// The counter-party module doesn't implement the correct acknowledgment format
 			return errors.New("cannot unmarshal acknowledgment")
 		}
-
+		fmt.Println("\n\n\n\nOnAcknowledgementGetDecryptionKeyPacket Acknowledgement_Result\n\n\n\n")
 		return nil
 	default:
 		// The counter-party module doesn't implement the correct acknowledgment format
